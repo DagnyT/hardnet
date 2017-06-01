@@ -21,6 +21,17 @@ Logs are stored in tensorboard format in directory logs/
 
 Pre-trained models can be found in folder pretrained:  train_liberty and train_liberty_with_aug
 
+## Usage example
+
+We provide an example, how to describe patches with HardNet. Script expects patches in [HPatches](https://github.com/hpatches/hpatches-benchmark) format, i.e. grayscale image with w = patch_size and h = n_patches * patch_size
+cd examples
+./extract_hardnet_desc_from_hpatches_file.py imgs/ref.png out.txt
+
+or with Caffe:
+    
+cd examples/caffe
+python extract_hardnetCaffe_desc_from_hpatches_file.py ../imgs/ref.png hardnet_caffe.txt
+
 
 ## Citation
 
