@@ -1,6 +1,6 @@
 # HardNet model implementation
 
-HardNet model implementation in PyTorch for paper "Working hard to know your neighbor's margins: Local descriptor learning loss"
+HardNet model implementation in PyTorch for paper ["Working hard to know your neighbor's margins: Local descriptor learning loss"](https://arxiv.org/abs/1705.10872)
 
 ## Requirements
 
