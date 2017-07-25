@@ -23,7 +23,7 @@ def loss_HardNet(anchor, positive, anchor_swap = False, anchor_ave = False, marg
     eye = torch.autograd.Variable(torch.eye(dist_matrix.size(1))).cuda()
 
     # steps to filter out same patches that occur in distance matrix as negatives
-    pos = torch.diag(dist_matrix)
+    pos1 = torch.diag(dist_matrix)
     dist_without_min_on_diag = dist_matrix+eye*10
     mask = (dist_without_min_on_diag.ge(0.008)-1)*-1
     mask = mask.type_as(dist_without_min_on_diag)*10
@@ -34,12 +34,14 @@ def loss_HardNet(anchor, positive, anchor_swap = False, anchor_ave = False, marg
             min_neg2 = torch.t(torch.min(dist_without_min_on_diag,0)[0])
             min_neg = torch.min(min_neg,min_neg2)
         min_neg = torch.t(min_neg).squeeze(0)
+        pos = pos1
     elif batch_reduce == 'average':
-        min_neg = torch.mean(dist_without_min_on_diag,1)
+        pos = pos1.repeat(anchor.size(0)).view(-1,1).squeeze(0)
+        min_neg = dist_without_min_on_diag.view(-1,1)
         if anchor_swap:
-            min_neg2 = torch.t(torch.mean(dist_without_min_on_diag,0))
+            min_neg2 = torch.t(dist_without_min_on_diag).contiguous().view(-1,1)
             min_neg = torch.min(min_neg,min_neg2)
-        min_neg = torch.t(min_neg).squeeze(0)
+        min_neg = min_neg.squeeze(0)
     elif batch_reduce == 'random':
         idxs = torch.autograd.Variable(torch.randperm(anchor.size()[0]).long()).cuda()
         min_neg = dist_without_min_on_diag.gather(1,idxs.view(-1,1))
@@ -47,6 +49,7 @@ def loss_HardNet(anchor, positive, anchor_swap = False, anchor_ave = False, marg
             min_neg2 = torch.t(dist_without_min_on_diag).gather(1,idxs.view(-1,1)) 
             min_neg = torch.min(min_neg,min_neg2)
         min_neg = torch.t(min_neg).squeeze(0)
+        pos = pos1
     else: 
         print ('Unknown batch reduce mode. Try min, average or random')
         sys.exit(1)

@@ -339,7 +339,7 @@ def train(train_loader, model, optimizer, epoch, logger):
                             loss_type = args.loss)
            
         optimizer.zero_grad()
-        loss.backward()
+        loss.backward(retain_variables = True)
         optimizer.step()
         adjust_learning_rate(optimizer)
         if (args.enable_logging):
@@ -456,7 +456,7 @@ def main(train_loader, test_loaders, model, logger, file_logger):
             # print(weights_path)
             patch_images = w1bs.get_list_of_patch_images(
                 DATASET_DIR=args.w1bsroot.replace('/code', '/data/W1BS'))
-            desc_name = 'curr_desc'
+            desc_name = 'curr_desc' + str(random.randint(0,100))
 
             for img_fname in patch_images:
                 w1bs_extract_descs_and_save(img_fname, model, desc_name, cuda = args.cuda,
@@ -477,7 +477,7 @@ def main(train_loader, test_loaders, model, logger, file_logger):
                                          logger=file_logger,
                                          tensor_logger = logger)
             else:
-                w1bs.draw_and_save_plots_with_loggers(DESC_DIR=DESCS_DIR, OUT_DIR=OUT_DIR,
+                w1bs.draw_and_save_plots(DESC_DIR=DESCS_DIR, OUT_DIR=OUT_DIR,
                                          methods=["SNN_ratio"],
                                          descs_to_draw=[desc_name],
                                          really_draw = False)
