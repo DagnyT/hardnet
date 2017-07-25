@@ -342,8 +342,8 @@ def train(train_loader, model, optimizer, epoch, logger):
         loss.backward()
         optimizer.step()
         adjust_learning_rate(optimizer)
-
-        logger.log_value('loss', loss.data[0]).step()
+        if (args.enable_logging):
+            logger.log_value('loss', loss.data[0]).step()
 
         if batch_idx % args.log_interval == 0:
             pbar.set_description(

@@ -35,16 +35,16 @@ def loss_HardNet(anchor, positive, anchor_swap = False, anchor_ave = False, marg
             min_neg = torch.min(min_neg,min_neg2)
         min_neg = torch.t(min_neg).squeeze(0)
     elif batch_reduce == 'average':
-        min_neg = torch.mean(dist_without_min_on_diag,1)[0]
+        min_neg = torch.mean(dist_without_min_on_diag,1)
         if anchor_swap:
-            min_neg2 = torch.t(torch.mean(dist_without_min_on_diag,0)[0])
+            min_neg2 = torch.t(torch.mean(dist_without_min_on_diag,0))
             min_neg = torch.min(min_neg,min_neg2)
         min_neg = torch.t(min_neg).squeeze(0)
     elif batch_reduce == 'random':
-        idxs = torch.randperm(anchor.size()[0]).long()
+        idxs = torch.autograd.Variable(torch.randperm(anchor.size()[0]).long()).cuda()
         min_neg = dist_without_min_on_diag.gather(1,idxs.view(-1,1))
         if anchor_swap:
-            min_neg2 = torch.t(dist_without_min_on_diag.gather(0,idxs.view(-1,1))) 
+            min_neg2 = torch.t(dist_without_min_on_diag).gather(1,idxs.view(-1,1)) 
             min_neg = torch.min(min_neg,min_neg2)
         min_neg = torch.t(min_neg).squeeze(0)
     else: 
