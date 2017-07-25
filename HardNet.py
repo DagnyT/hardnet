@@ -56,6 +56,11 @@ parser.add_argument('--experiment-name', default= '/liberty_train/',
                     help='experiment path')
 parser.add_argument('--training-set', default= 'liberty',
                     help='Other options: notredame, yosemite')
+
+parser.add_argument('--loss', default= 'triplet_margin',
+                    help='Other options: softmax, contrastive')
+parser.add_argument('--batch-reduce', default= 'min',
+                    help='Other options: average, random')
 parser.add_argument('--num-workers', default= 8,
                     help='Number of workers to be created')
 parser.add_argument('--pin-memory',type=bool, default= True,
@@ -327,8 +332,13 @@ def train(train_loader, model, optimizer, epoch, logger):
         out_a, out_p = model(data_a), model(data_p)
 
         #hardnet loss
-        loss = loss_margin_min(out_a, out_p, margin=args.margin, anchor_swap=args.anchorswap, anchor_ave=args.anchorave)
-
+        loss = loss_HardNet(out_a, out_p,
+                            margin=args.margin,
+                            anchor_swap=args.anchorswap,
+                            anchor_ave=args.anchorave,
+                            batch_reduce = args.batch_reduce,
+                            loss_type = args.loss)
+           
         optimizer.zero_grad()
         loss.backward()
         optimizer.step()
