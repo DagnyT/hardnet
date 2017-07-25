@@ -485,6 +485,8 @@ def main(train_loader, test_loaders, model, logger, file_logger):
 if __name__ == '__main__':
 
             LOG_DIR = args.log_dir + args.experiment_name
+            if not os.path.isdir(LOG_DIR):
+                os.makedirs(LOG_DIR)
             logger, file_logger = None, None
             model = TNet()
 
