@@ -32,8 +32,7 @@ import random
 import cv2
 import copy
 from EvalMetrics import ErrorRateAt95Recall
-from Losses import loss_margin_min
-from Loggers import Logger, FileLogger
+from Losses import loss_HardNet
 from W1BS import w1bs_extract_descs_and_save
 from Utils import L2Norm, cv2_scale, np_reshape
 from Utils import str2bool
@@ -48,8 +47,8 @@ parser.add_argument('--w1bsroot', type=str,
 parser.add_argument('--dataroot', type=str,
                     default='datasets/',
                     help='path to dataset')
-parser.add_argument('--enable-logging',type=bool, default=True,
-                    help='folder to output model checkpoints')
+parser.add_argument('--enable-logging',type=bool, default=False,
+                    help='output to tensorlogger')
 parser.add_argument('--log-dir', default='./logs',
                     help='folder to output model checkpoints')
 parser.add_argument('--experiment-name', default= '/liberty_train/',
@@ -490,8 +489,9 @@ if __name__ == '__main__':
             model = TNet()
 
             if(args.enable_logging):
+                from Loggers import Logger, FileLogger
                 logger = Logger(LOG_DIR)
                 file_logger = FileLogger(LOG_DIR)
-                train_loader, test_loaders = create_loaders()
+            train_loader, test_loaders = create_loaders()
 
             main(train_loader, test_loaders, model, logger, file_logger)
