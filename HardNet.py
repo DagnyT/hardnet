@@ -32,7 +32,7 @@ import random
 import cv2
 import copy
 from EvalMetrics import ErrorRateAt95Recall
-from Losses import loss_HardNet
+from Losses import loss_HardNet, loss_random_sampling
 from W1BS import w1bs_extract_descs_and_save
 from Utils import L2Norm, cv2_scale, np_reshape
 from Utils import str2bool
@@ -59,7 +59,7 @@ parser.add_argument('--training-set', default= 'liberty',
 parser.add_argument('--loss', default= 'triplet_margin',
                     help='Other options: softmax, contrastive')
 parser.add_argument('--batch-reduce', default= 'min',
-                    help='Other options: average, random')
+                    help='Other options: average, random, random_global')
 parser.add_argument('--num-workers', default= 8,
                     help='Number of workers to be created')
 parser.add_argument('--pin-memory',type=bool, default= True,
@@ -143,10 +143,10 @@ class TripletPhotoTour(dset.PhotoTour):
     note: a triplet is composed by a pair of matching images and one of
     different class.
     """
-    def __init__(self, train=True, transform=None, batch_size = None, *arg, **kw):
+    def __init__(self, train=True, transform=None, batch_size = None,load_random_triplets = False,  *arg, **kw):
         super(TripletPhotoTour, self).__init__(*arg, **kw)
         self.transform = transform
-
+        self.out_triplets = load_random_triplets
         self.train = train
         self.n_triplets = args.n_triplets
         self.batch_size = batch_size
@@ -210,20 +210,27 @@ class TripletPhotoTour(dset.PhotoTour):
 
         img_a = transform_img(a)
         img_p = transform_img(p)
-
+        img_n = None
+        if self.out_triplets:
+            img_n = transform_img(n)
         # transform images if required
         if args.fliprot:
             do_flip = random.random() > 0.5
             do_rot = random.random() > 0.5
-
             if do_rot:
                 img_a = img_a.permute(0,2,1)
                 img_p = img_p.permute(0,2,1)
-
+                if self.out_triplets:
+                    img_n = img_n.permute(0,2,1)
             if do_flip:
                 img_a = torch.from_numpy(deepcopy(img_a.numpy()[:,:,::-1]))
                 img_p = torch.from_numpy(deepcopy(img_p.numpy()[:,:,::-1]))
-        return img_a, img_p
+                if self.out_triplets:
+                    img_n = torch.from_numpy(deepcopy(img_n.numpy()[:,:,::-1]))
+        if self.out_triplets:
+            return (img_a, img_p, img_n)
+        else:
+            return (img_a, img_p)
 
     def __len__(self):
         if self.train:
@@ -280,7 +287,7 @@ def weights_init(m):
         nn.init.orthogonal(m.weight.data, gain=0.01)
         nn.init.constant(m.bias.data, 0.)
 
-def create_loaders():
+def create_loaders(load_random_triplets = False):
 
     test_dataset_names = copy.copy(dataset_names)
     test_dataset_names.remove(args.training_set)
@@ -295,6 +302,7 @@ def create_loaders():
 
     train_loader = torch.utils.data.DataLoader(
             TripletPhotoTour(train=True,
+                             load_random_triplets = load_random_triplets,
                              batch_size=args.batch_size,
                              root=args.dataroot,
                              name=args.training_set,
@@ -317,27 +325,35 @@ def create_loaders():
 
     return train_loader, test_loaders
 
-def train(train_loader, model, optimizer, epoch, logger):
+def train(train_loader, model, optimizer, epoch, logger, load_triplets  = False):
     # switch to train mode
     model.train()
     pbar = tqdm(enumerate(train_loader))
-    for batch_idx, (data_a, data_p) in pbar:
-
-        if args.cuda:
-            data_a, data_p = data_a.cuda(), data_p.cuda()
-
-        data_a, data_p = Variable(data_a), Variable(data_p)
-
-        out_a, out_p = model(data_a), model(data_p)
-
-        #hardnet loss
-        loss = loss_HardNet(out_a, out_p,
-                            margin=args.margin,
-                            anchor_swap=args.anchorswap,
-                            anchor_ave=args.anchorave,
-                            batch_reduce = args.batch_reduce,
-                            loss_type = args.loss)
-           
+    for batch_idx, data in pbar:
+        #print( data)
+        if load_triplets:
+            data_a, data_p, data_n = data
+            if args.cuda:
+                data_a, data_p, data_n  = data_a.cuda(), data_p.cuda(), data_n.cuda()
+            data_a, data_p, data_n = Variable(data_a), Variable(data_p), Variable(data_n)
+            out_a, out_p, out_n = model(data_a), model(data_p), model(data_n)
+            loss = loss_random_sampling(out_a, out_p, out_n,
+                                margin=args.margin,
+                                anchor_swap=args.anchorswap,
+                                loss_type = args.loss)
+        else:
+            data_a, data_p = data
+            if args.cuda:
+                data_a, data_p = data_a.cuda(), data_p.cuda()
+            data_a, data_p = Variable(data_a), Variable(data_p)
+            out_a, out_p = model(data_a), model(data_p)
+            #hardnet loss
+            loss = loss_HardNet(out_a, out_p,
+                                margin=args.margin,
+                                anchor_swap=args.anchorswap,
+                                anchor_ave=args.anchorave,
+                                batch_reduce = args.batch_reduce,
+                                loss_type = args.loss)
         optimizer.zero_grad()
         loss.backward()
         optimizer.step()
@@ -441,30 +457,28 @@ def main(train_loader, test_loaders, model, logger, file_logger):
             model.load_state_dict(checkpoint['state_dict'])
         else:
             print('=> no checkpoint found at {}'.format(args.resume))
-
+    load_random_triplets = args.batch_reduce == 'random_global'
     start = args.start_epoch
     end = start + args.epochs
     for epoch in range(start, end):
-
-        train(train_loader, model, optimizer1, epoch, logger)
-
+        train(train_loader, model, optimizer1, epoch, logger, load_random_triplets)
         # iterate over test loaders and test results
         for test_loader in test_loaders:
             test(test_loader['dataloader'], model, epoch, logger, test_loader['name'])
-
         if TEST_ON_W1BS :
             # print(weights_path)
             patch_images = w1bs.get_list_of_patch_images(
                 DATASET_DIR=args.w1bsroot.replace('/code', '/data/W1BS'))
             desc_name = 'curr_desc'# + str(random.randint(0,100))
+            
+            DESCS_DIR = LOG_DIR + '/temp_descs/' #args.w1bsroot.replace('/code', "/data/out_descriptors")
+            OUT_DIR = DESCS_DIR.replace('/temp_descs/', "/out_graphs/")
 
             for img_fname in patch_images:
                 w1bs_extract_descs_and_save(img_fname, model, desc_name, cuda = args.cuda,
                                             mean_img=args.mean_image,
-                                            std_img=args.std_image)
+                                            std_img=args.std_image, out_dir = DESCS_DIR)
 
-            DESCS_DIR = LOG_DIR + '/temp_descs/' #args.w1bsroot.replace('/code', "/data/out_descriptors")
-            OUT_DIR = args.w1bsroot.replace('/code', "/data/out_graphs")
 
             force_rewrite_list = [desc_name]
             w1bs.match_descriptors_and_save_results(DESC_DIR=DESCS_DIR, do_rewrite=True,
@@ -482,21 +496,24 @@ def main(train_loader, test_loaders, model, logger, file_logger):
                                          descs_to_draw=[desc_name],
                                          really_draw = False)
 
-if __name__ == '__main__':
 
+
+if __name__ == '__main__':
             LOG_DIR = args.log_dir + args.experiment_name
             if not os.path.isdir(LOG_DIR):
                 os.makedirs(LOG_DIR)
-            DESCS_DIR = LOG_DIR + '/temp_descs/'
+            DESCS_DIR = LOG_DIR + 'temp_descs'
             if not os.path.isdir(DESCS_DIR):
                 os.makedirs(DESCS_DIR)
             logger, file_logger = None, None
             model = TNet()
-
             if(args.enable_logging):
                 from Loggers import Logger, FileLogger
                 logger = Logger(LOG_DIR)
                 file_logger = FileLogger(LOG_DIR)
-            train_loader, test_loaders = create_loaders()
-
+            if args.batch_reduce.strip() != 'random_global':
+                train_loader, test_loaders = create_loaders()
+            else:
+                print('Global random negatives')
+                train_loader, test_loaders = create_loaders(load_random_triplets = True)
             main(train_loader, test_loaders, model, logger, file_logger)

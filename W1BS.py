@@ -6,9 +6,14 @@ from tqdm import tqdm
 import torch
 from torch.autograd import Variable
 
-def w1bs_extract_descs_and_save(input_img_fname, model, desc_name, mean_img=0.443728476019, std_img=0.20197947209, cuda = False):
-    out_fname = input_img_fname.replace("data/W1BS", "data/out_descriptors").replace(".bmp", "." + desc_name)
-    out_dir = os.path.dirname(out_fname)
+def w1bs_extract_descs_and_save(input_img_fname, model, desc_name, mean_img=0.443728476019, std_img=0.20197947209, cuda = False, out_dir = None):
+    if out_dir is None:
+        out_fname = input_img_fname.replace("data/W1BS", "data/out_descriptors").replace(".bmp", "." + desc_name)
+        out_dir = os.path.dirname(out_fname)
+    else:
+        out_fname = out_dir + input_img_fname[input_img_fname.find('data/W1BS'):].replace("data/W1BS", "").replace(".bmp", "." + desc_name)
+        out_fname = out_fname.replace('//', '/')
+        out_dir = os.path.dirname(out_fname)
     if len(out_dir) > 0:
         if not os.path.isdir(out_dir):
             os.makedirs(out_dir)
