@@ -438,8 +438,8 @@ def train(train_loader, model, optimizer, epoch, logger):
         loss.backward()
         optimizer.step()
         adjust_learning_rate(optimizer)
-
-        logger.log_value('loss', loss.data[0]).step()
+        if(logger!=None):
+         logger.log_value('loss', loss.data[0]).step()
 
         if batch_idx % args.log_interval == 0:
             pbar.set_description(
@@ -485,7 +485,8 @@ def test(test_loader, model, epoch, logger, logger_test_name):
     print('\33[91mTest set: Accuracy(FPR95): {:.8f}\n\33[0m'.format(fpr95))
 
     if (args.enable_logging):
-        logger.log_value(logger_test_name+' fpr95', fpr95)
+        if(logger!=None):
+            logger.log_value(logger_test_name+' fpr95', fpr95)
     return
 
 def adjust_learning_rate(optimizer):
@@ -604,7 +605,7 @@ def main(trainPhotoTourDataset, test_loaders, model, logger, file_logger):
                                          methods=["SNN_ratio"],
                                          descs_to_draw=[desc_name],
                                          logger=file_logger,
-                                         tensor_logger = logger)
+                                         tensor_logger = None)
             else:
                 w1bs.draw_and_save_plots_with_loggers(DESC_DIR=DESCS_DIR, OUT_DIR=OUT_DIR,
                                          methods=["SNN_ratio"],
