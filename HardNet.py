@@ -339,7 +339,7 @@ def train(train_loader, model, optimizer, epoch, logger):
                             loss_type = args.loss)
            
         optimizer.zero_grad()
-        loss.backward(retain_variables = True)
+        loss.backward()
         optimizer.step()
         adjust_learning_rate(optimizer)
         if (args.enable_logging):
@@ -456,14 +456,14 @@ def main(train_loader, test_loaders, model, logger, file_logger):
             # print(weights_path)
             patch_images = w1bs.get_list_of_patch_images(
                 DATASET_DIR=args.w1bsroot.replace('/code', '/data/W1BS'))
-            desc_name = 'curr_desc' + str(random.randint(0,100))
+            desc_name = 'curr_desc'# + str(random.randint(0,100))
 
             for img_fname in patch_images:
                 w1bs_extract_descs_and_save(img_fname, model, desc_name, cuda = args.cuda,
                                             mean_img=args.mean_image,
                                             std_img=args.std_image)
 
-            DESCS_DIR = args.w1bsroot.replace('/code', "/data/out_descriptors")
+            DESCS_DIR = LOG_DIR + '/temp_descs/' #args.w1bsroot.replace('/code', "/data/out_descriptors")
             OUT_DIR = args.w1bsroot.replace('/code', "/data/out_graphs")
 
             force_rewrite_list = [desc_name]
@@ -487,6 +487,9 @@ if __name__ == '__main__':
             LOG_DIR = args.log_dir + args.experiment_name
             if not os.path.isdir(LOG_DIR):
                 os.makedirs(LOG_DIR)
+            DESCS_DIR = LOG_DIR + '/temp_descs/'
+            if not os.path.isdir(DESCS_DIR):
+                os.makedirs(DESCS_DIR)
             logger, file_logger = None, None
             model = TNet()
 
