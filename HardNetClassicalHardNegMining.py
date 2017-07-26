@@ -1,4 +1,4 @@
-#!/usr/bin/python2 -utt
+﻿#!/usr/bin/python2 -utt
 #-*- coding: utf-8 -*-
 """
 This is HardNet local patch descriptor. The training code is based on PyTorch TFeat implementation
@@ -133,10 +133,10 @@ if args.cuda:
     cudnn.benchmark = True
     torch.cuda.manual_seed_all(args.seed)
 
+LOG_DIR = args.log_dir + args.experiment_name
 # create loggin directory
-if not os.path.exists(args.log_dir):
-    os.makedirs(args.log_dir)
-
+if not os.path.exists(LOG_DIR):
+    os.makedirs(LOG_DIR)
 # set random seeds
 torch.manual_seed(args.seed)
 np.random.seed(args.seed)
