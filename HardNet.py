@@ -32,7 +32,7 @@ import random
 import cv2
 import copy
 from EvalMetrics import ErrorRateAt95Recall
-from Losses import loss_HardNet, loss_random_sampling
+from Losses import loss_HardNet, loss_random_sampling, loss_L2Net
 from W1BS import w1bs_extract_descs_and_save
 from Utils import L2Norm, cv2_scale, np_reshape
 from Utils import str2bool
@@ -348,12 +348,15 @@ def train(train_loader, model, optimizer, epoch, logger, load_triplets  = False)
             data_a, data_p = Variable(data_a), Variable(data_p)
             out_a, out_p = model(data_a), model(data_p)
             #hardnet loss
-            loss = loss_HardNet(out_a, out_p,
-                                margin=args.margin,
-                                anchor_swap=args.anchorswap,
-                                anchor_ave=args.anchorave,
-                                batch_reduce = args.batch_reduce,
-                                loss_type = args.loss)
+            if args.batch_reduce == 'L2Net':
+                loss = loss_L2Net(out_a, out_p, anchor_swap =args.anchorswap,  margin = args.margin, loss_type = args.loss)
+            else:
+                loss = loss_HardNet(out_a, out_p,
+                                    margin=args.margin,
+                                    anchor_swap=args.anchorswap,
+                                    anchor_ave=args.anchorave,
+                                    batch_reduce = args.batch_reduce,
+                                    loss_type = args.loss)
         optimizer.zero_grad()
         loss.backward()
         optimizer.step()
