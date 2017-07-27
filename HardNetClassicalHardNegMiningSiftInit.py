@@ -63,7 +63,7 @@ parser.add_argument('--log-dir', default='./logs',
                     help='folder to output model checkpoints')
 parser.add_argument('--experiment-name', default= '/liberty_train_hard_mining/',
                     help='experiment path')
-parser.add_argument('--decor',type=str2bool, default = True,
+parser.add_argument('--decor',type=str2bool, default = False,
                     help='L2Net decorrelation penalty')
 parser.add_argument('--training-set', default= 'liberty',
                     help='Other options: notredame, yosemite')
@@ -73,7 +73,7 @@ parser.add_argument('--pin-memory',type=bool, default= True,
                     help='')
 parser.add_argument('--anchorave', type=bool, default=False,
                     help='anchorave')
-parser.add_argument('--hardnegatives', type=int, default=12,
+parser.add_argument('--hardnegatives', type=int, default=7,
                     help='the height / width of the input image to network')
 parser.add_argument('--imageSize', type=int, default=32,
                     help='the height / width of the input image to network')
@@ -318,8 +318,12 @@ class TripletPhotoTourHardNegatives(dset.PhotoTour):
                     n2 = np.random.randint(0, len(indices[c1]) - 1)
             indx = indices[c1][n1]
             if(len(negative_indices[indx])>0):
+
                 negative_indx = random.choice(negative_indices[indx])
                 negative_indices[indx].remove(negative_indx)
+
+                if(indx in negative_indices[negative_indx]):
+                    negative_indices[negative_indx].remove(indx)
 
             else:
                 count+=1
@@ -334,7 +338,6 @@ class TripletPhotoTourHardNegatives(dset.PhotoTour):
         print(count)
         print('triplets are generated. amount of triplets: {}'.format(len(triplets)))
         return torch.LongTensor(np.array(triplets))
-
 
 
     def __getitem__(self, index):
@@ -717,7 +720,7 @@ def pre_init_with_sift(trainPhotoTourDataset):
 
 
 def get_descriptors_for_dataset(model, trainPhotoTourDataset):
-
+    model.eval()
     transformed = []
 
     for img in trainPhotoTourDataset.data:
