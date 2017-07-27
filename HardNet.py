@@ -36,6 +36,21 @@ from Losses import loss_HardNet, loss_random_sampling, loss_L2Net
 from W1BS import w1bs_extract_descs_and_save
 from Utils import L2Norm, cv2_scale, np_reshape
 from Utils import str2bool
+import torch.nn as nn
+import torch.nn.functional as F
+
+class CorrelationPenaltyLoss(nn.Module):
+    def __init__(self):
+        super(CorrelationPenaltyLoss, self).__init__()
+
+    def forward(self, input):
+        mean1 = torch.mean(input, dim=0)
+        zeroed = input - mean1.expand_as(input)
+        cor_mat = torch.bmm(torch.t(zeroed).unsqueeze(0), zeroed.unsqueeze(0)).squeeze(0)
+        d = torch.diag(torch.diag(cor_mat))
+        no_diag = cor_mat - d
+        d_sq = no_diag * no_diag
+        return torch.sqrt(d_sq.sum()) / input.size(0)
 
 # Training settings
 parser = argparse.ArgumentParser(description='PyTorch HardNet')
@@ -64,6 +79,8 @@ parser.add_argument('--num-workers', default= 8,
                     help='Number of workers to be created')
 parser.add_argument('--pin-memory',type=bool, default= True,
                     help='')
+parser.add_argument('--decor',type=bool, default = False,
+                    help='L2Net decorrelation penalty')
 parser.add_argument('--anchorave', type=bool, default=False,
                     help='anchorave')
 parser.add_argument('--imageSize', type=int, default=32,
@@ -357,6 +374,8 @@ def train(train_loader, model, optimizer, epoch, logger, load_triplets  = False)
                                     anchor_ave=args.anchorave,
                                     batch_reduce = args.batch_reduce,
                                     loss_type = args.loss)
+        if args.decor:
+            loss += CorrelationPenaltyLoss()(out_a)
         optimizer.zero_grad()
         loss.backward()
         optimizer.step()
