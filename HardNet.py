@@ -351,7 +351,7 @@ def train(train_loader, model, optimizer, epoch, logger, load_triplets  = False)
             if args.batch_reduce == 'L2Net':
                 loss = loss_L2Net(out_a, out_p, anchor_swap =args.anchorswap,  margin = args.margin, loss_type = args.loss)
             else:
-                loss = loss_HardNet(out_a, out_p,
+                loss = 3 * loss_HardNet(out_a, out_p,
                                     margin=args.margin,
                                     anchor_swap=args.anchorswap,
                                     anchor_ave=args.anchorave,
@@ -404,7 +404,7 @@ def test(test_loader, model, epoch, logger, logger_test_name):
     labels = np.vstack(labels).reshape(num_tests)
     distances = np.vstack(distances).reshape(num_tests)
 
-    fpr95 = ErrorRateAt95Recall(labels, distances)
+    fpr95 = ErrorRateAt95Recall(labels, 1.0 / (distances + 1e-8))
     print('\33[91mTest set: Accuracy(FPR95): {:.8f}\n\33[0m'.format(fpr95))
 
     if (args.enable_logging):
@@ -464,10 +464,10 @@ def main(train_loader, test_loaders, model, logger, file_logger):
     start = args.start_epoch
     end = start + args.epochs
     for epoch in range(start, end):
-        train(train_loader, model, optimizer1, epoch, logger, load_random_triplets)
         # iterate over test loaders and test results
         for test_loader in test_loaders:
             test(test_loader['dataloader'], model, epoch, logger, test_loader['name'])
+        train(train_loader, model, optimizer1, epoch, logger, load_random_triplets)
         if TEST_ON_W1BS :
             # print(weights_path)
             patch_images = w1bs.get_list_of_patch_images(
