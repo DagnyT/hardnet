@@ -1,5 +1,6 @@
 ﻿#!/usr/bin/python2 -utt
 #-*- coding: utf-8 -*-
+
 """
 This is HardNet local patch descriptor. The training code is based on PyTorch TFeat implementation
 https://github.com/edgarriba/examples/tree/master/triplet
@@ -32,7 +33,6 @@ import random
 import cv2
 import copy
 from EvalMetrics import ErrorRateAt95Recall
-from Losses import loss_margin_min
 from Loggers import Logger, FileLogger
 from W1BS import w1bs_extract_descs_and_save
 from Utils import L2Norm, cv2_scale, np_reshape
@@ -41,8 +41,7 @@ import torch.utils.data as data
 import torch.utils.data as data_utils
 import torch.nn.functional as F
 
-
-sys.path.insert(0, '/home/dagnyt/faiss/faiss/')
+sys.path.insert(0, '/home/old-ufo/dev/faiss/')
 import faiss
 
 # Training settings
@@ -55,6 +54,8 @@ parser.add_argument('--w1bsroot', type=str,
 parser.add_argument('--dataroot', type=str,
                     default='datasets/',
                     help='path to dataset')
+parser.add_argument('--resume', default='', type=str, metavar='PATH',
+                    help='path to latest checkpoint (default: none)')
 parser.add_argument('--enable-logging',type=bool, default=True,
                     help='folder to output model checkpoints')
 parser.add_argument('--log-dir', default='./logs',
@@ -75,8 +76,6 @@ parser.add_argument('--mean-image', type=float, default=0.443728476019,
                     help='mean of train dataset for normalization')
 parser.add_argument('--std-image', type=float, default=0.20197947209,
                     help='std of train dataset for normalization')
-parser.add_argument('--resume', default='', type=str, metavar='PATH',
-                    help='path to latest checkpoint (default: none)')
 parser.add_argument('--start-epoch', default=0, type=int, metavar='N',
                     help='manual epoch number (useful on restarts)')
 parser.add_argument('--epochs', type=int, default=10, metavar='E',
@@ -481,7 +480,7 @@ def test(test_loader, model, epoch, logger, logger_test_name):
     labels = np.vstack(labels).reshape(num_tests)
     distances = np.vstack(distances).reshape(num_tests)
 
-    fpr95 = ErrorRateAt95Recall(labels, distances)
+    fpr95 = ErrorRateAt95Recall(labels, 1.0 / (distances + 1e-8))
     print('\33[91mTest set: Accuracy(FPR95): {:.8f}\n\33[0m'.format(fpr95))
 
     if (args.enable_logging):
@@ -607,7 +606,7 @@ def main(trainPhotoTourDataset, test_loaders, model, logger, file_logger):
                                          logger=file_logger,
                                          tensor_logger = None)
             else:
-                w1bs.draw_and_save_plots_with_loggers(DESC_DIR=DESCS_DIR, OUT_DIR=OUT_DIR,
+                w1bs.draw_and_save_plots(DESC_DIR=DESCS_DIR, OUT_DIR=OUT_DIR,
                                          methods=["SNN_ratio"],
                                          descs_to_draw=[desc_name],
                                          really_draw = False)
