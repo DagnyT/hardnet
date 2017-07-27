@@ -19,7 +19,7 @@ def distance_vectors_pairwise(anchor, positive, negative):
     p_sq = torch.sum(positive * positive, dim=1)
     n_sq = torch.sum(negative * negative, dim=1)
 
-    eps = 1e-6
+    eps = 1e-8
     d_a_p = torch.sqrt(a_sq + p_sq - 2*torch.sum(anchor * positive, dim = 1) + eps)
     d_a_n = torch.sqrt(a_sq + n_sq - 2*torch.sum(anchor * negative, dim = 1) + eps)
     d_p_n = torch.sqrt(p_sq + n_sq - 2*torch.sum(positive * negative, dim = 1) + eps)
