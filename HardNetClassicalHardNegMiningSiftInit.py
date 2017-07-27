@@ -40,6 +40,7 @@ from Utils import str2bool
 import torch.utils.data as data
 import torch.utils.data as data_utils
 import torch.nn.functional as F
+from Losses import loss_HardNet, loss_random_sampling, loss_L2Net
 
 sys.path.insert(0, '/home/dagnyt/faiss/faiss/')
 import faiss
@@ -62,6 +63,8 @@ parser.add_argument('--log-dir', default='./logs',
                     help='folder to output model checkpoints')
 parser.add_argument('--experiment-name', default= '/liberty_train_hard_mining/',
                     help='experiment path')
+parser.add_argument('--decor',type=str2bool, default = True,
+                    help='L2Net decorrelation penalty')
 parser.add_argument('--training-set', default= 'liberty',
                     help='Other options: notredame, yosemite')
 parser.add_argument('--num-workers', default= 8,
@@ -70,7 +73,7 @@ parser.add_argument('--pin-memory',type=bool, default= True,
                     help='')
 parser.add_argument('--anchorave', type=bool, default=False,
                     help='anchorave')
-parser.add_argument('--hardnegatives', type=int, default=25,
+parser.add_argument('--hardnegatives', type=int, default=12,
                     help='the height / width of the input image to network')
 parser.add_argument('--imageSize', type=int, default=32,
                     help='the height / width of the input image to network')
@@ -141,6 +144,20 @@ if not os.path.exists(LOG_DIR):
 # set random seeds
 torch.manual_seed(args.seed)
 np.random.seed(args.seed)
+
+
+class CorrelationPenaltyLoss(nn.Module):
+    def __init__(self):
+        super(CorrelationPenaltyLoss, self).__init__()
+
+    def forward(self, input):
+        mean1 = torch.mean(input, dim=0)
+        zeroed = input - mean1.expand_as(input)
+        cor_mat = torch.bmm(torch.t(zeroed).unsqueeze(0), zeroed.unsqueeze(0)).squeeze(0)
+        d = torch.diag(torch.diag(cor_mat))
+        no_diag = cor_mat - d
+        d_sq = no_diag * no_diag
+        return torch.sqrt(d_sq.sum()) / input.size(0)
 
 
 from matplotlib.pyplot import figure, imshow, axis
@@ -302,6 +319,8 @@ class TripletPhotoTourHardNegatives(dset.PhotoTour):
             indx = indices[c1][n1]
             if(len(negative_indices[indx])>0):
                 negative_indx = random.choice(negative_indices[indx])
+                negative_indices[indx].remove(negative_indx)
+
             else:
                 count+=1
                 c2 = np.random.randint(0, n_classes - 1)
@@ -309,8 +328,6 @@ class TripletPhotoTourHardNegatives(dset.PhotoTour):
                     c2 = np.random.randint(0, n_classes - 1)
                 n3 = np.random.randint(0, len(indices[c2]) - 1)
                 negative_indx = indices[c2][n3]
-
-            already_idxs.add(c1)
 
             triplets.append([indices[c1][n1], indices[c1][n2], negative_indx])
 
@@ -335,9 +352,6 @@ class TripletPhotoTourHardNegatives(dset.PhotoTour):
         t = self.triplets[index]
         a, p, n = self.data[t[0]], self.data[t[1]], self.data[t[2]]
 
-        # img_a = a
-        # img_p = p
-        # img_n = n
         img_a = transform_img(a)
         img_p = transform_img(p)
         img_n = transform_img(n)
@@ -447,7 +461,10 @@ def train(train_loader, model, optimizer, epoch, logger):
         out_a, out_p, out_n = model(data_a), model(data_p), model(data_n)
 
         #hardnet loss
-        loss = F.triplet_margin_loss(out_p, out_a, out_n, margin=args.margin, swap=args.anchorswap)
+        loss = loss_random_sampling(out_a, out_p, out_n, margin=args.margin)
+
+        if args.decor:
+            loss += CorrelationPenaltyLoss()(out_a)
 
         optimizer.zero_grad()
         loss.backward()
@@ -604,7 +621,7 @@ def main(trainPhotoTourDataset, test_loaders, model, logger, file_logger):
 
         train_loader = torch.utils.data.DataLoader(trainPhotoTourDatasetWithHardNegatives,
                                                    batch_size=args.batch_size,
-                                                   shuffle=False, **kwargs)
+                                                   shuffle=True, **kwargs)
 
         train(train_loader, model, optimizer1, epoch, logger)
 
