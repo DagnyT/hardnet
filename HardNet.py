@@ -255,55 +255,56 @@ class TripletPhotoTour(dset.PhotoTour):
         else:
             return self.matches.size(0)
 
-class TNet(nn.Module):
-    """TFeat model definition
+class HardNet(nn.Module):
+    """HardNet model definition
     """
     def __init__(self):
-        super(TNet, self).__init__()
+        super(HardNet, self).__init__()
 
         self.features = nn.Sequential(
-            nn.Conv2d(1, 32, kernel_size=3, padding=1),
+            nn.Conv2d(1, 32, kernel_size=3, padding=1, bias = False),
             nn.BatchNorm2d(32, affine=False),
             nn.ReLU(),
-            nn.Conv2d(32, 32, kernel_size=3, padding=1),
+            nn.Conv2d(32, 32, kernel_size=3, padding=1, bias = False),
             nn.BatchNorm2d(32, affine=False),
             nn.ReLU(),
-            nn.Conv2d(32, 64, kernel_size=3, stride=2, padding=1),
+            nn.Conv2d(32, 64, kernel_size=3, stride=2, padding=1, bias = False),
             nn.BatchNorm2d(64, affine=False),
             nn.ReLU(),
-            nn.Conv2d(64, 64, kernel_size=3, padding=1),
+            nn.Conv2d(64, 64, kernel_size=3, padding=1, bias = False),
             nn.BatchNorm2d(64, affine=False),
             nn.ReLU(),
-            nn.Conv2d(64, 128, kernel_size=3, stride=2,padding=1),
+            nn.Conv2d(64, 128, kernel_size=3, stride=2,padding=1, bias = False),
             nn.BatchNorm2d(128, affine=False),
             nn.ReLU(),
-            nn.Conv2d(128, 128, kernel_size=3, padding=1),
+            nn.Conv2d(128, 128, kernel_size=3, padding=1, bias = False),
             nn.BatchNorm2d(128, affine=False),
             nn.ReLU(),
             nn.Dropout(0.1),
-            nn.Conv2d(128, 128, kernel_size=8),
+            nn.Conv2d(128, 128, kernel_size=8, bias = False),
             nn.BatchNorm2d(128, affine=False),
-
         )
         self.features.apply(weights_init)
-
-    def forward(self, input):
-        flat = input.view(input.size(0), -1)
+        return
+    def input_norm(self,x):
+        flat = x.view(x.size(0), -1)
         mp = torch.sum(flat, dim=1) / (32. * 32.)
         sp = torch.std(flat, dim=1) + 1e-7
-        x_features = self.features(
-            (input - mp.unsqueeze(-1).unsqueeze(-1).expand_as(input)) / sp.unsqueeze(-1).unsqueeze(1).expand_as(input))
+        return (x - mp.unsqueeze(-1).unsqueeze(-1).unsqueeze(-1).expand_as(x)) / sp.unsqueeze(-1).unsqueeze(-1).unsqueeze(1).expand_as(x)
+
+    def forward(self, input):
+        x_features = self.features(self.input_norm(input))
         x = x_features.view(x_features.size(0), -1)
         return L2Norm()(x)
 
 def weights_init(m):
     if isinstance(m, nn.Conv2d):
         nn.init.orthogonal(m.weight.data, gain=0.7)
-        nn.init.constant(m.bias.data, 0.01)
-    if isinstance(m, nn.Linear):
-        nn.init.orthogonal(m.weight.data, gain=0.01)
-        nn.init.constant(m.bias.data, 0.)
-
+        try:
+            nn.init.constant(m.bias.data, 0.01)
+        except:
+            pass
+    return
 def create_loaders(load_random_triplets = False):
 
     test_dataset_names = copy.copy(dataset_names)
@@ -366,10 +367,10 @@ def train(train_loader, model, optimizer, epoch, logger, load_triplets  = False)
             out_a, out_p = model(data_a), model(data_p)
             #hardnet loss
             if args.batch_reduce == 'L2Net':
-                loss = loss_L2Net(out_a, out_p, anchor_swap =args.anchorswap,  margin = args.margin, loss_type = args.loss)
+                loss = loss_L2Net(out_a, out_p, column_row_swap = True, anchor_swap =args.anchorswap, margin = args.margin, loss_type = args.loss)
             else:
-                loss = 3 * loss_HardNet(out_a, out_p,
-                                    margin=args.margin,
+                loss = loss_HardNet(out_a, out_p,
+                                    margin=args.margin, column_row_swap = True, 
                                     anchor_swap=args.anchorswap,
                                     anchor_ave=args.anchorave,
                                     batch_reduce = args.batch_reduce,
@@ -410,7 +411,7 @@ def test(test_loader, model, epoch, logger, logger_test_name):
 
         out_a, out_p = model(data_a), model(data_p)
         dists = torch.sqrt(torch.sum((out_a - out_p) ** 2, 1))  # euclidean distance
-        distances.append(dists.data.cpu().numpy())
+        distances.append(dists.data.cpu().numpy().reshape(-1,1))
         ll = label.data.cpu().numpy().reshape(-1, 1)
         labels.append(ll)
 
@@ -528,7 +529,7 @@ if __name__ == '__main__':
             if not os.path.isdir(DESCS_DIR):
                 os.makedirs(DESCS_DIR)
             logger, file_logger = None, None
-            model = TNet()
+            model = HardNet()
             if(args.enable_logging):
                 from Loggers import Logger, FileLogger
                 logger = Logger(LOG_DIR)
