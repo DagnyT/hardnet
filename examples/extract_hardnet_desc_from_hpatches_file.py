@@ -20,7 +20,7 @@ class L2Norm(nn.Module):
         self.eps = 1e-10
     def forward(self, x):
         norm = torch.sqrt(torch.sum(x * x, dim = 1) + self.eps)
-        x= x / norm.expand_as(x)
+        x= x / norm.unsqueeze(-1).expand_as(x)
         return x
 
 class L1Norm(nn.Module):
@@ -64,12 +64,14 @@ class HardNet(nn.Module):
         )
         #self.features.apply(weights_init)
 
-    def forward(self, input):
-        flat = input.view(input.size(0), -1)
+    def input_norm(self,x):
+        flat = x.view(x.size(0), -1)
         mp = torch.sum(flat, dim=1) / (32. * 32.)
         sp = torch.std(flat, dim=1) + 1e-7
-        x_features = self.features(
-            (input - mp.unsqueeze(-1).unsqueeze(-1).expand_as(input)) / sp.unsqueeze(-1).unsqueeze(1).expand_as(input))
+        return (x - mp.unsqueeze(-1).unsqueeze(-1).unsqueeze(-1).expand_as(x)) / sp.unsqueeze(-1).unsqueeze(-1).unsqueeze(1).expand_as(x)
+
+    def forward(self, input):
+        x_features = self.features(self.input_norm(input))
         x = x_features.view(x_features.size(0), -1)
         return L2Norm()(x)
     
@@ -86,7 +88,7 @@ try:
     input_img_fname = sys.argv[1]
     output_fname = sys.argv[2]
 except:
-    print "Wrong input format. Try ./extract_hardnet_desc_from_hpatches_file.py imgs.ref.png out.txt"
+    print "Wrong input format. Try ./extract_hardnet_desc_from_hpatches_file.py imgs/ref.png out.txt"
     sys.exit(1)
 
 image = cv2.imread(input_img_fname,0)
