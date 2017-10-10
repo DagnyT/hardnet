@@ -1,4 +1,3 @@
-
 # Copyright (c) 2015-present, Facebook, Inc.
 # All rights reserved.
 #
@@ -52,9 +51,11 @@ parameter_set = ['0.0','1.0']
 #parameter_set = ['0.0','1.0','5.0','10.0','20.0','50.0','100.0','200']
 number_gpu = len(gpu_set)
 
-#datasets = ['notredame', 'yosemite', 'liberty']
-datasets = ['liberty']
+datasets = ['notredame', 'yosemite', 'liberty']
+#datasets = ['liberty']
 process_set = []
+
+
 for dataset in datasets:
     for idx, parameter in enumerate(parameter_set):
         print('Test Parameter: {}'.format(parameter))
@@ -62,7 +63,7 @@ for dataset in datasets:
         #command = 'python HardNet_provenance.py --fliprot=False --provenance --n-triplets=1000000 --epochs 10 --alpha=0.0 --beta={} --loss_type=1 --gpu-id {}'\
         #        .format(parameter,gpu_set[idx%number_gpu])
         
-        command = 'python HardNet.py --training-set {} --fliprot=False --batch-reduce=random_global --n-triplets=1000000 --batch-size=128 --epochs 10 --alpha={} --w1bsroot=None --gpu-id {} --log-dir ./ubc_log/  --enable-logging=True --model-dir ./ubc_model/'\
+        command = 'python HardNet.py --training-set {} --fliprot=False --batch-reduce=random_global --n-triplets=1000000 --batch-size=128 --epochs 2 --alpha={} --w1bsroot=None --gpu-id {} --log-dir ../ubc_log/  --enable-logging=True --model-dir ../ubc_model/ --hard_mining=True'\
                 .format(dataset, parameter,gpu_set[idx%number_gpu])
     
         print(command)

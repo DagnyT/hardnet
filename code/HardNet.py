@@ -32,7 +32,7 @@ import random
 import cv2
 import copy
 from EvalMetrics import ErrorRateAt95Recall
-from Losses import loss_HardNet, loss_random_sampling, loss_L2Net, loss_HardNet_gor
+from Losses import loss_HardNet, loss_random_sampling, loss_L2Net, loss_HardNet_gor, loss_random_sampling_gor
 from W1BS import w1bs_extract_descs_and_save
 from Utils import L2Norm, cv2_scale, np_reshape
 from Utils import str2bool
@@ -50,25 +50,25 @@ class CorrelationPenaltyLoss(nn.Module):
         d = torch.diag(torch.diag(cor_mat))
         no_diag = cor_mat - d
         d_sq = no_diag * no_diag
-        return torch.sqrt(d_sq.sum()) / input.size(0)
+        return torch.sqrt(d_sq.sum())/input.size(0)
 
 # Training settings
 parser = argparse.ArgumentParser(description='PyTorch HardNet')
 # Model options
 
 parser.add_argument('--w1bsroot', type=str,
-                    default='wxbs-descriptors-benchmark/code',
+                    default='../wxbs-descriptors-benchmark/code',
                     help='path to dataset')
 parser.add_argument('--dataroot', type=str,
-                    default='datasets/',
+                    default='../datasets/',
                     help='path to dataset')
 parser.add_argument('--enable-logging',type=bool, default=False,
                     help='output to tensorlogger')
 parser.add_argument('--hard_mining',type=bool, default=False,
                     help='enable hard mining')
-parser.add_argument('--log-dir', default='./logs',
+parser.add_argument('--log-dir', default='../logs',
                     help='folder to output model checkpoints')
-parser.add_argument('--model-dir', default='./models',
+parser.add_argument('--model-dir', default='../models',
                     help='folder to output model checkpoints')
 parser.add_argument('--experiment-name', default= '/liberty_train/',
                     help='experiment path')
@@ -78,7 +78,7 @@ parser.add_argument('--loss', default= 'triplet_margin',
                     help='Other options: softmax, contrastive')
 parser.add_argument('--batch-reduce', default= 'min',
                     help='Other options: average, random')
-parser.add_argument('--num-workers', default= 8,
+parser.add_argument('--num-workers', default= 1,
                     help='Number of workers to be created')
 parser.add_argument('--pin-memory',type=bool, default= True,
                     help='')
@@ -164,7 +164,8 @@ torch.manual_seed(args.seed)
 np.random.seed(args.seed)
 
 class TripletPhotoTour(dset.PhotoTour):
-    """From the PhotoTour Dataset it generates triplet samples
+    """
+    From the PhotoTour Dataset it generates triplet samples
     note: a triplet is composed by a pair of matching images and one of
     different class.
     """
@@ -294,15 +295,8 @@ class HardNet(nn.Module):
         self.features.apply(weights_init)
         return
 
-    def input_norm(self,x):
-        #flat = x.view(x.size(0), -1)
-        #mp = torch.sum(flat, dim=1) / (32. * 32.)
-        #sp = torch.std(flat, dim=1) + 1e-7
-        #return (x - mp.unsqueeze(-1).unsqueeze(-1).unsqueeze(-1).expand_as(x)) / sp.unsqueeze(-1).unsqueeze(-1).unsqueeze(1).expand_as(x)
-        return x
-
     def forward(self, input):
-        x_features = self.features(self.input_norm(input))
+        x_features = self.features(input)
         x = x_features.view(x_features.size(0), -1)
         return L2Norm()(x)
 
@@ -368,20 +362,21 @@ def train(train_loader, model, optimizer, epoch, logger, load_triplets  = False)
 
             if args.hard_mining:
                 if args.batch_reduce == 'L2Net':
-                    loss = loss_L2Net(out_a, out_p, column_row_swap = True, anchor_swap =args.anchorswap,
+                    loss = loss_L2Net(out_a, out_p, anchor_swap =args.anchorswap,
                             margin = args.margin, loss_type = args.loss)
                 else:
                     loss = loss_HardNet_gor(out_a, out_p, out_n,
-                                    margin=args.margin, alpha = args.alpha, column_row_swap = True, 
+                                    margin=args.margin, alpha = args.alpha,  
                                     anchor_swap=args.anchorswap,
                                     anchor_ave=args.anchorave,
                                     batch_reduce = 'min',
                                     loss_type = args.loss)
-            else
+            else:
                 loss = loss_random_sampling_gor(out_a, out_p, out_n,
                                     margin=args.margin,
                                     alpha = args.alpha,
                                     anchor_swap=args.anchorswap,
+                                    loss_type = args.loss)
         if args.decor:
             loss += CorrelationPenaltyLoss()(out_a)
         optimizer.zero_grad()

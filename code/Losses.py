@@ -56,7 +56,6 @@ def loss_random_sampling(anchor, positive, negative, anchor_swap = False, margin
 def loss_random_sampling_gor(anchor, positive, negative, anchor_swap = False, margin = 1.0, alpha = 0.0, loss_type = "triplet_margin"):
     """Loss with random sampling (no hard in batch).
     """
-
     assert anchor.size() == positive.size(), "Input sizes between positive and negative must be equal."
     assert anchor.size() == negative.size(), "Input sizes between positive and negative must be equal."
     assert anchor.dim() == 2, "Inputd must be a 2D matrix."
@@ -81,12 +80,12 @@ def loss_random_sampling_gor(anchor, positive, negative, anchor_swap = False, ma
         sys.exit(1)
     #loss = torch.mean(loss)
     neg_dis = torch.sum(torch.mul(anchor,negative),1)
-    dim = (float)anchor.size()[0]
+    dim = anchor.size(1)
     gor = torch.pow(torch.mean(neg_dis),2) + torch.clamp(torch.mean(torch.pow(neg_dis,2))-1.0/dim, min=0.0)
     loss = torch.mean(loss) + alpha*gor
     return loss
 
-def loss_L2Net(anchor, positive, column_row_swap = False,anchor_swap = False,  margin = 1.0, loss_type = "triplet_margin"):
+def loss_L2Net(anchor, positive, anchor_swap = False,  margin = 1.0, loss_type = "triplet_margin"):
     """L2Net losses: using whole batch as negatives, not only hardest.
     """
 
@@ -107,7 +106,7 @@ def loss_L2Net(anchor, positive, column_row_swap = False,anchor_swap = False,  m
         exp_pos = torch.exp(2.0 - pos1);
         exp_den = torch.sum(torch.exp(2.0 - dist_matrix),1) + eps;
         loss = -torch.log( exp_pos / exp_den )
-        if column_row_swap:
+        if anchor_swap:
             exp_den1 = torch.sum(torch.exp(2.0 - dist_matrix),0) + eps;
             loss += -torch.log( exp_pos / exp_den1 )
     else: 
@@ -116,7 +115,8 @@ def loss_L2Net(anchor, positive, column_row_swap = False,anchor_swap = False,  m
     loss = torch.mean(loss)
     return loss
 
-def loss_HardNet(anchor, positive, column_row_swap = False, anchor_swap = False, anchor_ave = False, margin = 1.0, batch_reduce = 'min', loss_type = "triplet_margin"):
+def loss_HardNet(anchor, positive, anchor_swap = False, anchor_ave = False,\
+        margin = 1.0, batch_reduce = 'min', loss_type = "triplet_margin"):
     """HardNet margin loss - calculates loss based on distance matrix based on positive distance and closest negative distance.
     """
 
@@ -134,7 +134,7 @@ def loss_HardNet(anchor, positive, column_row_swap = False, anchor_swap = False,
     dist_without_min_on_diag = dist_without_min_on_diag+mask
     if batch_reduce == 'min':
         min_neg = torch.min(dist_without_min_on_diag,1)[0]
-        if column_row_swap:
+        if anchor_swap:
             min_neg2 = torch.min(dist_without_min_on_diag,0)[0]
             min_neg = torch.min(min_neg,min_neg2)
         if False:
@@ -155,14 +155,14 @@ def loss_HardNet(anchor, positive, column_row_swap = False, anchor_swap = False,
     elif batch_reduce == 'average':
         pos = pos1.repeat(anchor.size(0)).view(-1,1).squeeze(0)
         min_neg = dist_without_min_on_diag.view(-1,1)
-        if column_row_swap:
+        if anchor_swap:
             min_neg2 = torch.t(dist_without_min_on_diag).contiguous().view(-1,1)
             min_neg = torch.min(min_neg,min_neg2)
         min_neg = min_neg.squeeze(0)
     elif batch_reduce == 'random':
         idxs = torch.autograd.Variable(torch.randperm(anchor.size()[0]).long()).cuda()
         min_neg = dist_without_min_on_diag.gather(1,idxs.view(-1,1))
-        if column_row_swap:
+        if anchor_swap:
             min_neg2 = torch.t(dist_without_min_on_diag).gather(1,idxs.view(-1,1)) 
             min_neg = torch.min(min_neg,min_neg2)
         min_neg = torch.t(min_neg).squeeze(0)
@@ -184,7 +184,7 @@ def loss_HardNet(anchor, positive, column_row_swap = False, anchor_swap = False,
     loss = torch.mean(loss)
     return loss
 
-def loss_HardNet_gor(anchor, positive, negative, column_row_swap = False, anchor_swap = False, anchor_ave = False,\
+def loss_HardNet_gor(anchor, positive, negative, anchor_swap = False, anchor_ave = False,\
         margin = 1.0, alpha = 1.0, batch_reduce = 'min', loss_type = "triplet_margin"):
     """HardNet margin loss - calculates loss based on distance matrix based on positive distance and closest negative distance.
     """
@@ -203,7 +203,7 @@ def loss_HardNet_gor(anchor, positive, negative, column_row_swap = False, anchor
     dist_without_min_on_diag = dist_without_min_on_diag+mask
     if batch_reduce == 'min':
         min_neg = torch.min(dist_without_min_on_diag,1)[0]
-        if column_row_swap:
+        if anchor_swap:
             min_neg2 = torch.min(dist_without_min_on_diag,0)[0]
             min_neg = torch.min(min_neg,min_neg2)
         if False:
@@ -225,14 +225,14 @@ def loss_HardNet_gor(anchor, positive, negative, column_row_swap = False, anchor
     elif batch_reduce == 'average':
         pos = pos1.repeat(anchor.size(0)).view(-1,1).squeeze(0)
         min_neg = dist_without_min_on_diag.view(-1,1)
-        if column_row_swap:
+        if anchor_swap:
             min_neg2 = torch.t(dist_without_min_on_diag).contiguous().view(-1,1)
             min_neg = torch.min(min_neg,min_neg2)
         min_neg = min_neg.squeeze(0)
     elif batch_reduce == 'random':
         idxs = torch.autograd.Variable(torch.randperm(anchor.size()[0]).long()).cuda()
         min_neg = dist_without_min_on_diag.gather(1,idxs.view(-1,1))
-        if column_row_swap:
+        if anchor_swap:
             min_neg2 = torch.t(dist_without_min_on_diag).gather(1,idxs.view(-1,1)) 
             min_neg = torch.min(min_neg,min_neg2)
         min_neg = torch.t(min_neg).squeeze(0)
@@ -253,11 +253,12 @@ def loss_HardNet_gor(anchor, positive, negative, column_row_swap = False, anchor
         sys.exit(1)
 
     #neg_dis = torch.pow(torch.sum(torch.mul(anchor,negative),1),2)
-
     #gor = torch.mean(neg_dis)
+    
     neg_dis = torch.sum(torch.mul(anchor,negative),1)
-    dim = (float)anchor.size()[0]
+    dim = anchor.size(1)
     gor = torch.pow(torch.mean(neg_dis),2) + torch.clamp(torch.mean(torch.pow(neg_dis,2))-1.0/dim, min=0.0)
+    
     loss = torch.mean(loss) + alpha*gor
     return loss
 
