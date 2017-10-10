@@ -32,7 +32,7 @@ import random
 import cv2
 import copy
 from EvalMetrics import ErrorRateAt95Recall
-from Losses import loss_HardNet, loss_random_sampling, loss_L2Net
+from Losses import loss_HardNet, loss_random_sampling, loss_L2Net, loss_HardNet_gor
 from W1BS import w1bs_extract_descs_and_save
 from Utils import L2Norm, cv2_scale, np_reshape
 from Utils import str2bool
@@ -64,17 +64,20 @@ parser.add_argument('--dataroot', type=str,
                     help='path to dataset')
 parser.add_argument('--enable-logging',type=bool, default=False,
                     help='output to tensorlogger')
+parser.add_argument('--hard_mining',type=bool, default=False,
+                    help='enable hard mining')
 parser.add_argument('--log-dir', default='./logs',
+                    help='folder to output model checkpoints')
+parser.add_argument('--model-dir', default='./models',
                     help='folder to output model checkpoints')
 parser.add_argument('--experiment-name', default= '/liberty_train/',
                     help='experiment path')
 parser.add_argument('--training-set', default= 'liberty',
                     help='Other options: notredame, yosemite')
-
 parser.add_argument('--loss', default= 'triplet_margin',
                     help='Other options: softmax, contrastive')
 parser.add_argument('--batch-reduce', default= 'min',
-                    help='Other options: average, random, random_global')
+                    help='Other options: average, random')
 parser.add_argument('--num-workers', default= 8,
                     help='Number of workers to be created')
 parser.add_argument('--pin-memory',type=bool, default= True,
@@ -105,6 +108,8 @@ parser.add_argument('--n-triplets', type=int, default=5000000, metavar='N',
                     help='how many triplets will generate from the dataset')
 parser.add_argument('--margin', type=float, default=1.0, metavar='MARGIN',
                     help='the margin value for the triplet loss function (default: 1.0')
+parser.add_argument('--alpha', type=float, default=1.0, metavar='ALPHA',
+                    help='gor parameter')
 parser.add_argument('--act-decay', type=float, default=0,
                     help='activity L2 decay, default 0')
 parser.add_argument('--lr', type=float, default=0.1, metavar='LR',
@@ -129,8 +134,11 @@ parser.add_argument('--log-interval', type=int, default=10, metavar='LI',
 
 args = parser.parse_args()
 
+suffix = '{}_alpha{:1.1e}'.format(args.training_set, args.alpha)
+
 dataset_names = ['liberty', 'notredame', 'yosemite']
 
+TEST_ON_W1BS = False
 # check if path to w1bs dataset testing module exists
 if os.path.isdir(args.w1bsroot):
     sys.path.insert(0, args.w1bsroot)
@@ -260,7 +268,6 @@ class HardNet(nn.Module):
     """
     def __init__(self):
         super(HardNet, self).__init__()
-
         self.features = nn.Sequential(
             nn.Conv2d(1, 32, kernel_size=3, padding=1, bias = False),
             nn.BatchNorm2d(32, affine=False),
@@ -286,11 +293,13 @@ class HardNet(nn.Module):
         )
         self.features.apply(weights_init)
         return
+
     def input_norm(self,x):
-        flat = x.view(x.size(0), -1)
-        mp = torch.sum(flat, dim=1) / (32. * 32.)
-        sp = torch.std(flat, dim=1) + 1e-7
-        return (x - mp.unsqueeze(-1).unsqueeze(-1).unsqueeze(-1).expand_as(x)) / sp.unsqueeze(-1).unsqueeze(-1).unsqueeze(1).expand_as(x)
+        #flat = x.view(x.size(0), -1)
+        #mp = torch.sum(flat, dim=1) / (32. * 32.)
+        #sp = torch.std(flat, dim=1) + 1e-7
+        #return (x - mp.unsqueeze(-1).unsqueeze(-1).unsqueeze(-1).expand_as(x)) / sp.unsqueeze(-1).unsqueeze(-1).unsqueeze(1).expand_as(x)
+        return x
 
     def forward(self, input):
         x_features = self.features(self.input_norm(input))
@@ -305,6 +314,7 @@ def weights_init(m):
         except:
             pass
     return
+
 def create_loaders(load_random_triplets = False):
 
     test_dataset_names = copy.copy(dataset_names)
@@ -355,44 +365,40 @@ def train(train_loader, model, optimizer, epoch, logger, load_triplets  = False)
                 data_a, data_p, data_n  = data_a.cuda(), data_p.cuda(), data_n.cuda()
             data_a, data_p, data_n = Variable(data_a), Variable(data_p), Variable(data_n)
             out_a, out_p, out_n = model(data_a), model(data_p), model(data_n)
-            loss = loss_random_sampling(out_a, out_p, out_n,
-                                margin=args.margin,
-                                anchor_swap=args.anchorswap,
-                                loss_type = args.loss)
-        else:
-            data_a, data_p = data
-            if args.cuda:
-                data_a, data_p = data_a.cuda(), data_p.cuda()
-            data_a, data_p = Variable(data_a), Variable(data_p)
-            out_a, out_p = model(data_a), model(data_p)
-            #hardnet loss
-            if args.batch_reduce == 'L2Net':
-                loss = loss_L2Net(out_a, out_p, column_row_swap = True, anchor_swap =args.anchorswap, margin = args.margin, loss_type = args.loss)
-            else:
-                loss = loss_HardNet(out_a, out_p,
-                                    margin=args.margin, column_row_swap = True, 
+
+            if args.hard_mining:
+                if args.batch_reduce == 'L2Net':
+                    loss = loss_L2Net(out_a, out_p, column_row_swap = True, anchor_swap =args.anchorswap,
+                            margin = args.margin, loss_type = args.loss)
+                else:
+                    loss = loss_HardNet_gor(out_a, out_p, out_n,
+                                    margin=args.margin, alpha = args.alpha, column_row_swap = True, 
                                     anchor_swap=args.anchorswap,
                                     anchor_ave=args.anchorave,
-                                    batch_reduce = args.batch_reduce,
+                                    batch_reduce = 'min',
                                     loss_type = args.loss)
+            else
+                loss = loss_random_sampling_gor(out_a, out_p, out_n,
+                                    margin=args.margin,
+                                    alpha = args.alpha,
+                                    anchor_swap=args.anchorswap,
         if args.decor:
             loss += CorrelationPenaltyLoss()(out_a)
         optimizer.zero_grad()
         loss.backward()
         optimizer.step()
         adjust_learning_rate(optimizer)
-        if (args.enable_logging):
-            logger.log_value('loss', loss.data[0]).step()
 
-        if batch_idx % args.log_interval == 0:
-            pbar.set_description(
-                'Train Epoch: {} [{}/{} ({:.0f}%)]\tLoss: {:.6f}'.format(
-                    epoch, batch_idx * len(data_a), len(train_loader.dataset),
-                           100. * batch_idx / len(train_loader),
-                    loss.data[0]))
+    if (args.enable_logging):
+        logger.log_value('loss', loss.data[0]).step()
+
+    try:
+        os.stat('{}{}'.format(args.model_dir,suffix))
+    except:
+        os.makedirs('{}{}'.format(args.model_dir,suffix))
 
     torch.save({'epoch': epoch + 1, 'state_dict': model.state_dict()},
-               '{}/checkpoint_{}.pth'.format(LOG_DIR, epoch))
+               '{}{}/checkpoint_{}.pth'.format(args.model_dir,suffix,epoch))
 
 def test(test_loader, model, epoch, logger, logger_test_name):
     # switch to evaluate mode
@@ -462,8 +468,8 @@ def main(train_loader, test_loaders, model, logger, file_logger):
     # print the experiment configuration
     print('\nparsed options:\n{}\n'.format(vars(args)))
 
-    if (args.enable_logging):
-        file_logger.log_string('logs.txt', '\nparsed options:\n{}\n'.format(vars(args)))
+    #if (args.enable_logging):
+    #    file_logger.log_string('logs.txt', '\nparsed options:\n{}\n'.format(vars(args)))
 
     if args.cuda:
         model.cuda()
@@ -480,14 +486,16 @@ def main(train_loader, test_loaders, model, logger, file_logger):
             model.load_state_dict(checkpoint['state_dict'])
         else:
             print('=> no checkpoint found at {}'.format(args.resume))
+            
     load_random_triplets = args.batch_reduce == 'random_global'
     start = args.start_epoch
     end = start + args.epochs
     for epoch in range(start, end):
         # iterate over test loaders and test results
+        train(train_loader, model, optimizer1, epoch, logger, load_random_triplets)
         for test_loader in test_loaders:
             test(test_loader['dataloader'], model, epoch, logger, test_loader['name'])
-        train(train_loader, model, optimizer1, epoch, logger, load_random_triplets)
+        
         if TEST_ON_W1BS :
             # print(weights_path)
             patch_images = w1bs.get_list_of_patch_images(
@@ -519,24 +527,24 @@ def main(train_loader, test_loaders, model, logger, file_logger):
                                          descs_to_draw=[desc_name],
                                          really_draw = False)
 
-
-
 if __name__ == '__main__':
-            LOG_DIR = args.log_dir + args.experiment_name
-            if not os.path.isdir(LOG_DIR):
-                os.makedirs(LOG_DIR)
-            DESCS_DIR = LOG_DIR + 'temp_descs'
-            if not os.path.isdir(DESCS_DIR):
-                os.makedirs(DESCS_DIR)
-            logger, file_logger = None, None
-            model = HardNet()
-            if(args.enable_logging):
-                from Loggers import Logger, FileLogger
-                logger = Logger(LOG_DIR)
-                file_logger = FileLogger(LOG_DIR)
-            if args.batch_reduce.strip() != 'random_global':
-                train_loader, test_loaders = create_loaders()
-            else:
-                print('Global random negatives')
-                train_loader, test_loaders = create_loaders(load_random_triplets = True)
-            main(train_loader, test_loaders, model, logger, file_logger)
+    LOG_DIR = args.log_dir
+    if not os.path.isdir(LOG_DIR):
+        os.makedirs(LOG_DIR)
+    LOG_DIR = args.log_dir + suffix
+    DESCS_DIR = LOG_DIR + 'temp_descs'
+    if TEST_ON_W1BS:
+        if not os.path.isdir(DESCS_DIR):
+            os.makedirs(DESCS_DIR)
+    logger, file_logger = None, None
+    model = HardNet()
+    if(args.enable_logging):
+        from Loggers import Logger, FileLogger
+        logger = Logger(LOG_DIR)
+        #file_logger = FileLogger(./log/+suffix)
+    if args.batch_reduce.strip() != 'random_global':
+        train_loader, test_loaders = create_loaders()
+    else:
+        print('Global random negatives')
+        train_loader, test_loaders = create_loaders(load_random_triplets = True)
+    main(train_loader, test_loaders, model, logger, file_logger)
