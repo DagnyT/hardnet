@@ -1,7 +1,0 @@
-torchfile==0.0.2
-tqdm==4.11.2
-numpy==1.12.1
-torch==0.1.12
-tensorboard_logger==0.0.3
-scipy==0.18.1
-torchvision==0.1.8
