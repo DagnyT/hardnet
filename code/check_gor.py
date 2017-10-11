@@ -44,15 +44,15 @@ parser.add_argument("--training", nargs='?', type=str, default = 'notredame',
 parser.add_argument("--test", nargs='?', type=str, default = 'yosemite',
                     help="Training dataset name")
 args = parser.parse_args()
-gpu_set = ['0','1']
+gpu_set = ['0']
 parameter_set = ['0.0','1.0']
 #gpu_set = ['2']
 #parameter_set = ['1.0']
 #parameter_set = ['0.0','1.0','5.0','10.0','20.0','50.0','100.0','200']
 number_gpu = len(gpu_set)
 
-datasets = ['notredame', 'yosemite', 'liberty']
-#datasets = ['liberty']
+#datasets = ['notredame', 'yosemite', 'liberty']
+datasets = ['liberty']
 process_set = []
 
 
