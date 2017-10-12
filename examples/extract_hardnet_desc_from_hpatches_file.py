@@ -64,9 +64,14 @@ class HardNet(nn.Module):
         )
         #self.features.apply(weights_init)
 
+    def input_norm(self,x):
+        flat = x.view(x.size(0), -1)
+        mp = torch.sum(flat, dim=1) / (32. * 32.)
+        sp = torch.std(flat, dim=1) + 1e-7
+        return (x - mp.unsqueeze(-1).unsqueeze(-1).unsqueeze(-1).expand_as(x)) / sp.unsqueeze(-1).unsqueeze(-1).unsqueeze(1).expand_as(x)
 
     def forward(self, input):
-        x_features = self.features(input)
+        x_features = self.features(self.input_norm(input))
         x = x_features.view(x_features.size(0), -1)
         return L2Norm()(x)
     
