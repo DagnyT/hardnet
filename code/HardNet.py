@@ -65,7 +65,7 @@ parser.add_argument('--dataroot', type=str,
 parser.add_argument('--enable-logging',type=bool, default=False,
                     help='output to tensorlogger')
 parser.add_argument('--log-dir', default='../logs',
-                    help='folder to output model checkpoints')
+                    help='folder to output log')
 parser.add_argument('--model-dir', default='../models',
                     help='folder to output model checkpoints')
 parser.add_argument('--experiment-name', default= '/liberty_train/',
