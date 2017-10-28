@@ -20,11 +20,12 @@ def w1bs_extract_descs_and_save(input_img_fname, model, desc_name, mean_img=0.44
     image = cv2.imread(input_img_fname, 0)
     h, w = image.shape
     # print(h,w)
-    n_patches = h / w
+    n_patches = int(h / w)
     patches_for_net = np.zeros((n_patches, 1, 32, 32))
     for i in range(n_patches):
         patch = cv2.resize(image[i * (w): (i + 1) * (w), 0:w], (32, 32))
         patches_for_net[i, 0, :, :] = patch[0:w, 0:w]
+    patches_for_net = patches_for_net/255
     patches_for_net -= mean_img  # np.mean(patches_for_net)
     patches_for_net /= std_img  # np.std(patches_for_net)
     t = time.time()
@@ -33,8 +34,8 @@ def w1bs_extract_descs_and_save(input_img_fname, model, desc_name, mean_img=0.44
     outs = []
     labels, distances = [], []
     pbar = tqdm(enumerate(patches_for_net))
-    bs = 128;
-    n_batches = n_patches / bs + 1
+    bs = 128
+    n_batches = int(n_patches / bs) + 1
     for batch_idx in range(n_batches):
         if batch_idx == n_batches - 1:
             if (batch_idx + 1) * bs > n_patches:

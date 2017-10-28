@@ -62,11 +62,11 @@ parser.add_argument('--w1bsroot', type=str,
 parser.add_argument('--dataroot', type=str,
                     default='../datasets/',
                     help='path to dataset')
-parser.add_argument('--enable-logging',type=bool, default=False,
+parser.add_argument('--enable-logging',type=str2bool, default=True,
                     help='output to tensorlogger')
-parser.add_argument('--log-dir', default='../logs',
+parser.add_argument('--log-dir', default='../logs/',
                     help='folder to output log')
-parser.add_argument('--model-dir', default='../models',
+parser.add_argument('--model-dir', default='../models/',
                     help='folder to output model checkpoints')
 parser.add_argument('--experiment-name', default= '/liberty_train/',
                     help='experiment path')
@@ -544,15 +544,14 @@ def main(train_loader, test_loaders, model, logger, file_logger):
             else:
                 w1bs.draw_and_save_plots(DESC_DIR=DESCS_DIR, OUT_DIR=OUT_DIR,
                                          methods=["SNN_ratio"],
-                                         descs_to_draw=[desc_name],
-                                         really_draw = False)
+                                         descs_to_draw=[desc_name])
 
 if __name__ == '__main__':
     LOG_DIR = args.log_dir
     if not os.path.isdir(LOG_DIR):
         os.makedirs(LOG_DIR)
-    LOG_DIR = args.log_dir + suffix
-    DESCS_DIR = LOG_DIR + 'temp_descs'
+    LOG_DIR = os.path.join(args.log_dir,suffix)
+    DESCS_DIR = os.path.join(LOG_DIR,'temp_descs')
     if TEST_ON_W1BS:
         if not os.path.isdir(DESCS_DIR):
             os.makedirs(DESCS_DIR)
