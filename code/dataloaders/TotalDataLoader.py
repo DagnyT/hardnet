@@ -48,21 +48,21 @@ class TotalDatasetsLoader(data.Dataset):
             for x in tqdm(range(num_triplets)):
                 if len(already_idxs) >= batch_size:
                     already_idxs = set()
-                c1 = np.random.randint(0, n_classes - 1)
+                c1 = np.random.randint(0, n_classes)
                 while c1 in already_idxs:
-                    c1 = np.random.randint(0, n_classes - 1)
+                    c1 = np.random.randint(0, n_classes)
                 already_idxs.add(c1)
-                c2 = np.random.randint(0, n_classes - 1)
+                c2 = np.random.randint(0, n_classes)
                 while c1 == c2:
-                    c2 = np.random.randint(0, n_classes - 1)
+                    c2 = np.random.randint(0, n_classes)
                 if len(indices[c1]) == 2:  # hack to speed up process
                     n1, n2 = 0, 1
                 else:
-                    n1 = np.random.randint(0, len(indices[c1]) - 1)
-                    n2 = np.random.randint(0, len(indices[c1]) - 1)
+                    n1 = np.random.randint(0, len(indices[c1]))
+                    n2 = np.random.randint(0, len(indices[c1]))
                     while n1 == n2:
-                        n2 = np.random.randint(0, len(indices[c1]) - 1)
-                n3 = np.random.randint(0, len(indices[c2]) - 1)
+                        n2 = np.random.randint(0, len(indices[c1]))
+                n3 = np.random.randint(0, len(indices[c2]))
                 triplets.append([indices[c1][n1], indices[c1][n2], indices[c2][n3]])
             return torch.LongTensor(np.array(triplets))
 

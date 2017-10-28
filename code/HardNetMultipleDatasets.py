@@ -70,9 +70,9 @@ parser.add_argument('--log-dir', default='../logs/',
                     help='folder to output log')
 parser.add_argument('--model-dir', default='../models/',
                     help='folder to output model checkpoints')
-parser.add_argument('--experiment-name', default='/liberty_train/',
+parser.add_argument('--experiment-name', default='/multiple_datasets/',
                     help='experiment path')
-parser.add_argument('--training-set', default='liberty',
+parser.add_argument('--training-set', default='notredame',
                     help='Other options: notredame, yosemite')
 parser.add_argument('--loss', default='triplet_margin',
                     help='Other options: softmax, contrastive')
@@ -100,9 +100,9 @@ parser.add_argument('--epochs', type=int, default=10, metavar='E',
                     help='number of epochs to train (default: 10)')
 parser.add_argument('--anchorswap', type=bool, default=True,
                     help='turns on anchor swap')
-parser.add_argument('--batch-size', type=int, default=1024, metavar='BS',
+parser.add_argument('--batch-size', type=int, default=2048, metavar='BS',
                     help='input batch size for training (default: 1024)')
-parser.add_argument('--test-batch-size', type=int, default=1024, metavar='BST',
+parser.add_argument('--test-batch-size', type=int, default=2048, metavar='BST',
                     help='input batch size for testing (default: 1024)')
 parser.add_argument('--n-triplets', type=int, default=5000000, metavar='N',
                     help='how many triplets will generate from the dataset')
@@ -116,7 +116,7 @@ parser.add_argument('--act-decay', type=float, default=0,
                     help='activity L2 decay, default 0')
 parser.add_argument('--lr', type=float, default=0.1, metavar='LR',
                     help='learning rate (default: 0.1)')
-parser.add_argument('--fliprot', type=str2bool, default=False,
+parser.add_argument('--fliprot', type=str2bool, default=True,
                     help='turns on flip and 90deg rotation augmentation')
 parser.add_argument('--lr-decay', default=1e-6, type=float, metavar='LRD',
                     help='learning rate decay ratio (default: 1e-6')
@@ -223,21 +223,21 @@ class TotalDatasetsLoader(data.Dataset):
             for x in tqdm(range(num_triplets)):
                 if len(already_idxs) >= batch_size:
                     already_idxs = set()
-                c1 = np.random.randint(0, n_classes - 1)
+                c1 = np.random.randint(0, n_classes)
                 while c1 in already_idxs:
-                    c1 = np.random.randint(0, n_classes - 1)
+                    c1 = np.random.randint(0, n_classes)
                 already_idxs.add(c1)
-                c2 = np.random.randint(0, n_classes - 1)
+                c2 = np.random.randint(0, n_classes)
                 while c1 == c2:
-                    c2 = np.random.randint(0, n_classes - 1)
+                    c2 = np.random.randint(0, n_classes)
                 if len(indices[c1]) == 2:  # hack to speed up process
                     n1, n2 = 0, 1
                 else:
-                    n1 = np.random.randint(0, len(indices[c1]) - 1)
-                    n2 = np.random.randint(0, len(indices[c1]) - 1)
+                    n1 = np.random.randint(0, len(indices[c1]))
+                    n2 = np.random.randint(0, len(indices[c1]))
                     while n1 == n2:
-                        n2 = np.random.randint(0, len(indices[c1]) - 1)
-                n3 = np.random.randint(0, len(indices[c2]) - 1)
+                        n2 = np.random.randint(0, len(indices[c1]))
+                n3 = np.random.randint(0, len(indices[c2]))
                 triplets.append([indices[c1][n1], indices[c1][n2], indices[c2][n3]])
             return torch.LongTensor(np.array(triplets))
 
