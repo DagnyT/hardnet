@@ -408,6 +408,12 @@ def train(train_loader, model, optimizer, epoch, logger, load_triplets  = False)
         loss.backward()
         optimizer.step()
         adjust_learning_rate(optimizer)
+        if batch_idx % args.log_interval == 0:
+            pbar.set_description(
+                'Train Epoch: {} [{}/{} ({:.0f}%)]\tLoss: {:.6f}'.format(
+                    epoch, batch_idx * len(data_a), len(train_loader.dataset),
+                           100. * batch_idx / len(train_loader),
+                    loss.data[0]))
 
     if (args.enable_logging):
         logger.log_value('loss', loss.data[0]).step()
