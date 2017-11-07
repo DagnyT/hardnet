@@ -3,4 +3,3 @@ wxbs-descriptors-benchmark/
 datasets/
 *.log
 *.pyc
-*.pth
