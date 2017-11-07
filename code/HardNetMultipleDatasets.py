@@ -31,7 +31,7 @@ import numpy as np
 import random
 import cv2
 import copy
-from EvalMetrics import ErrorRateAt95Recall
+from EvalMetrics import ErrorRateAt95Recall, ErrorRateFDRAt95Recall, convertFDR2FPR, convertFPR2FDR
 from Losses import loss_HardNet, loss_random_sampling, loss_L2Net, global_orthogonal_regularization
 from W1BS import w1bs_extract_descs_and_save
 from Utils import L2Norm, cv2_scale, np_reshape
@@ -70,7 +70,7 @@ parser.add_argument('--log-dir', default='../logs/',
                     help='folder to output log')
 parser.add_argument('--model-dir', default='../models/',
                     help='folder to output model checkpoints')
-parser.add_argument('--experiment-name', default='/multiple_datasets/',
+parser.add_argument('--experiment-name', default='/multiple_datasets_all/',
                     help='experiment path')
 parser.add_argument('--training-set', default='notredame',
                     help='Other options: notredame, yosemite')
@@ -100,13 +100,13 @@ parser.add_argument('--epochs', type=int, default=10, metavar='E',
                     help='number of epochs to train (default: 10)')
 parser.add_argument('--anchorswap', type=bool, default=True,
                     help='turns on anchor swap')
-parser.add_argument('--batch-size', type=int, default=2048, metavar='BS',
+parser.add_argument('--batch-size', type=int, default=128, metavar='BS',
                     help='input batch size for training (default: 1024)')
-parser.add_argument('--test-batch-size', type=int, default=2048, metavar='BST',
+parser.add_argument('--test-batch-size', type=int, default=128, metavar='BST',
                     help='input batch size for testing (default: 1024)')
-parser.add_argument('--n-triplets', type=int, default=5000000, metavar='N',
+parser.add_argument('--n-triplets', type=int, default=1000, metavar='N',
                     help='how many triplets will generate from the dataset')
-parser.add_argument('--margin', type=float, default=1.0, metavar='MARGIN',
+parser.add_argument('--margin', type=float, default=0.7, metavar='MARGIN',
                     help='the margin value for the triplet loss function (default: 1.0')
 parser.add_argument('--gor', type=str2bool, default=False,
                     help='use gor')
@@ -181,7 +181,6 @@ class TotalDatasetsLoader(data.Dataset):
         super(TotalDatasetsLoader, self).__init__()
 
         datasets_path = [os.path.join(datasets_path, dataset) for dataset in os.listdir(datasets_path)]
-        datasets_path = [dataset for dataset in datasets_path if 'liberty' not in dataset]
 
         datasets = [torch.load(dataset) for dataset in datasets_path]
 
@@ -400,7 +399,7 @@ class HardNet(nn.Module):
             nn.Conv2d(128, 128, kernel_size=3, padding=1, bias=False),
             nn.BatchNorm2d(128, affine=False),
             nn.ReLU(),
-            nn.Dropout(0.1),
+            nn.Dropout(0.25),
             nn.Conv2d(128, 128, kernel_size=8, bias=False),
             nn.BatchNorm2d(128, affine=False),
         )
@@ -560,7 +559,21 @@ def test(test_loader, model, epoch, logger, logger_test_name):
     distances = np.vstack(distances).reshape(num_tests)
 
     fpr95 = ErrorRateAt95Recall(labels, 1.0 / (distances + 1e-8))
+    fdr95 = ErrorRateFDRAt95Recall(labels, 1.0 / (distances + 1e-8))
+
+    fpr2 = convertFDR2FPR(fdr95, 0.95, 50000, 50000)
+    fpr2fdr = convertFPR2FDR(fpr2, 0.95, 50000, 50000)
+
+    print('\33[91mTest set: Accuracy(FDR95): {:.8f}\n\33[0m'.format(fdr95))
     print('\33[91mTest set: Accuracy(FPR95): {:.8f}\n\33[0m'.format(fpr95))
+    print('\33[91mTest set: Accuracy(FDR2FPR): {:.8f}\n\33[0m'.format(fpr2))
+    print('\33[91mTest set: Accuracy(FPR2FDR): {:.8f}\n\33[0m'.format(fpr2fdr))
+
+    fpr2 = convertFDR2FPR(round(fdr95,2), 0.95, 50000, 50000)
+    fpr2fdr = convertFPR2FDR(round(fpr2,2), 0.95, 50000, 50000)
+
+    print('\33[91mTest set: Accuracy(FDR2FPR): {:.8f}\n\33[0m'.format(fpr2))
+    print('\33[91mTest set: Accuracy(FPR2FDR): {:.8f}\n\33[0m'.format(fpr2fdr))
 
     if (args.enable_logging):
         logger.log_value(logger_test_name + ' fpr95', fpr95)
@@ -622,6 +635,9 @@ def main(train_loader, test_loaders, model, logger, file_logger):
     end = start + args.epochs
     for epoch in range(start, end):
         # iterate over test loaders and test results
+
+        train_loader, test_loaders2 = create_loaders(load_random_triplets=triplet_flag)
+
         train(train_loader, model, optimizer1, epoch, logger, triplet_flag)
         for test_loader in test_loaders:
             test(test_loader['dataloader'], model, epoch, logger, test_loader['name'])

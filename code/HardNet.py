@@ -60,17 +60,17 @@ parser.add_argument('--w1bsroot', type=str,
                     default='../wxbs-descriptors-benchmark/code',
                     help='path to dataset')
 parser.add_argument('--dataroot', type=str,
-                    default='../datasets/',
+                    default='/home/dagnyt/hardnet/datasets/',
                     help='path to dataset')
 parser.add_argument('--enable-logging',type=str2bool, default=True,
                     help='output to tensorlogger')
-parser.add_argument('--log-dir', default='../logs/',
+parser.add_argument('--log-dir', default='/home/dagnyt/hardnet/logs/',
                     help='folder to output log')
-parser.add_argument('--model-dir', default='../models/',
+parser.add_argument('--model-dir', default='/home/dagnyt/hardnet/models/',
                     help='folder to output model checkpoints')
-parser.add_argument('--experiment-name', default= '/liberty_train/',
+parser.add_argument('--experiment-name', default= '/notredame_train/',
                     help='experiment path')
-parser.add_argument('--training-set', default= 'liberty',
+parser.add_argument('--training-set', default= 'notredame',
                     help='Other options: notredame, yosemite')
 parser.add_argument('--loss', default= 'triplet_margin',
                     help='Other options: softmax, contrastive')
@@ -96,7 +96,7 @@ parser.add_argument('--start-epoch', default=0, type=int, metavar='N',
                     help='manual epoch number (useful on restarts)')
 parser.add_argument('--epochs', type=int, default=10, metavar='E',
                     help='number of epochs to train (default: 10)')
-parser.add_argument('--anchorswap', type=bool, default=True,
+parser.add_argument('--anchorswap', type=str2bool, default=True,
                     help='turns on anchor swap')
 parser.add_argument('--batch-size', type=int, default=1024, metavar='BS',
                     help='input batch size for training (default: 1024)')
@@ -114,7 +114,7 @@ parser.add_argument('--act-decay', type=float, default=0,
                     help='activity L2 decay, default 0')
 parser.add_argument('--lr', type=float, default=0.1, metavar='LR',
                     help='learning rate (default: 0.1)')
-parser.add_argument('--fliprot', type=str2bool, default=False,
+parser.add_argument('--fliprot', type=str2bool, default=True,
                     help='turns on flip and 90deg rotation augmentation')
 parser.add_argument('--lr-decay', default=1e-6, type=float, metavar='LRD',
                     help='learning rate decay ratio (default: 1e-6')
@@ -134,7 +134,7 @@ parser.add_argument('--log-interval', type=int, default=10, metavar='LI',
 
 args = parser.parse_args()
 
-suffix = '{}_{}'.format(args.training_set, args.batch_reduce)
+suffix = '{}_{}_{}'.format(args.experiment_name, args.training_set, args.batch_reduce)
 
 if args.gor:
     suffix = suffix+'_gor_alpha{:1.1f}'.format(args.alpha)
@@ -142,8 +142,10 @@ if args.anchorswap:
     suffix = suffix + '_as'
 if args.anchorave:
     suffix = suffix + '_av'
+if args.fliprot:
+        suffix = suffix + '_fliprot'
 
-triplet_flag = (args.batch_reduce == 'random_global') or args.gor 
+triplet_flag = (args.batch_reduce == 'random_global') or args.gor
 
 dataset_names = ['liberty', 'notredame', 'yosemite']
 
@@ -297,7 +299,7 @@ class HardNet(nn.Module):
             nn.Conv2d(128, 128, kernel_size=3, padding=1, bias = False),
             nn.BatchNorm2d(128, affine=False),
             nn.ReLU(),
-            nn.Dropout(0.1),
+            nn.Dropout(0.3),
             nn.Conv2d(128, 128, kernel_size=8, bias = False),
             nn.BatchNorm2d(128, affine=False),
         )
@@ -511,6 +513,7 @@ def main(train_loader, test_loaders, model, logger, file_logger):
     start = args.start_epoch
     end = start + args.epochs
     for epoch in range(start, end):
+
         # iterate over test loaders and test results
         train(train_loader, model, optimizer1, epoch, logger, triplet_flag)
         for test_loader in test_loaders:
@@ -545,6 +548,9 @@ def main(train_loader, test_loaders, model, logger, file_logger):
                 w1bs.draw_and_save_plots(DESC_DIR=DESCS_DIR, OUT_DIR=OUT_DIR,
                                          methods=["SNN_ratio"],
                                          descs_to_draw=[desc_name])
+        #randomize train loader batches
+        train_loader, test_loaders2 = create_loaders(load_random_triplets=triplet_flag)
+
 
 if __name__ == '__main__':
     LOG_DIR = args.log_dir

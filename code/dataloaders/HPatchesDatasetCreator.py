@@ -4,7 +4,7 @@ import torch
 import torch.utils.data as data
 import cv2
 
-types = ['e1','e2','e3','e4','e5','ref','h1']
+types = ['e1','e2','e3','e4','e5','ref','h1','h2','h3','h4','h5']
 images_to_exclude = ['v_adam', 'v_boat', 'v_graffiti', 'v_there','i_dome']
 
 def mean_image(patches):
