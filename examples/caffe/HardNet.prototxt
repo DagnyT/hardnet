@@ -22,7 +22,8 @@ layer {
     num_output: 32
     kernel_size: 3
     stride: 1
-    pad: 1
+    pad: 1 
+    bias_term: False
   }
 }
   
@@ -65,7 +66,7 @@ layer {
     num_output: 32
     kernel_size: 3
     stride: 1
-    pad: 1
+    pad: 1 bias_term: False
   }
 }
   
@@ -109,7 +110,7 @@ layer {
     num_output: 64
     kernel_size: 3
     stride: 2
-    pad: 1
+    pad: 1 bias_term: False
   }
 }
   
@@ -154,7 +155,7 @@ layer {
     num_output: 64
     kernel_size: 3
     stride: 1
-    pad: 1
+    pad: 1 bias_term: False
   }
 }
   
@@ -198,7 +199,7 @@ layer {
     num_output: 128
     kernel_size: 3
     stride: 2
-    pad: 1
+    pad: 1 bias_term: False
   }
 }
   
@@ -241,7 +242,7 @@ layer {
     num_output: 128
     kernel_size: 3
     stride: 1
-    pad: 1
+    pad: 1 bias_term: False
   }
 }
   
@@ -284,7 +285,7 @@ layer {
   convolution_param {
     num_output: 128
     kernel_size: 8
-  
+    bias_term: False
   }
 }
   

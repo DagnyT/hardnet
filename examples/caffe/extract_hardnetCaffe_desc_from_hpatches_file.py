@@ -20,7 +20,7 @@ PATCH_SIZE = 32
 DESC_SIZE = 128
 BATCH_SIZE = 256
 PROTOTXT_FNAME = 'HardNet.prototxt'
-WEIGHT_FNAME = 'HardNet+.caffemodel'
+WEIGHT_FNAME = 'HardNet++.caffemodel'
 
 
 def preprocess_patch(patch):
