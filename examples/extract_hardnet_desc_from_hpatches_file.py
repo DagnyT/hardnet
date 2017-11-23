@@ -76,57 +76,56 @@ class HardNet(nn.Module):
         return L2Norm()(x)
     
 
-model_weights = '../pretrained/train_liberty_with_aug/checkpoint_liberty_with_aug.pth'
+if __name__ == '__main__':
 
-model = HardNet()
-model.cuda()
+    model_weights = '../pretrained/train_liberty_with_aug/checkpoint_liberty_with_aug.pth'
 
-checkpoint = torch.load(model_weights)
-model.load_state_dict(checkpoint['state_dict'])
-model.eval()
-try:
-    input_img_fname = sys.argv[1]
-    output_fname = sys.argv[2]
-except:
-    print "Wrong input format. Try ./extract_hardnet_desc_from_hpatches_file.py imgs/ref.png out.txt"
-    sys.exit(1)
+    model = HardNet()
+    model.cuda()
 
-image = cv2.imread(input_img_fname,0)
-h,w = image.shape
-print(h,w)
+    checkpoint = torch.load(model_weights)
+    model.load_state_dict(checkpoint['state_dict'])
+    model.eval()
+    try:
+          input_img_fname = sys.argv[1]
+          output_fname = sys.argv[2]
+    except:
+          print("Wrong input format. Try ./extract_hardnet_desc_from_hpatches_file.py imgs/ref.png out.txt")
+          sys.exit(1)
 
-n_patches =  h/w
+    image = cv2.imread(input_img_fname,0)
+    h,w = image.shape
+    print(h,w)
 
+    n_patches =  int(h/w)
 
-descriptors_for_net = np.zeros((n_patches, 128))
-t = time.time()
-patches = np.ndarray((n_patches, 1, 32, 32), dtype=np.float32)
-for i in range(n_patches):
-    patch =  image[i*(w): (i+1)*(w), 0:w]
-    patches[i,0,:,:] = cv2.resize(patch,(32,32)) / 255.
-patches -= 0.443728476019
-patches /= 0.20197947209
-bs = 128;
-outs = []
-n_batches = n_patches / bs + 1
-t = time.time()
+    print('Amount of patches: {}'.format(n_patches))
 
-for batch_idx in range(n_batches):
-    if batch_idx == n_batches - 1:
-        if (batch_idx + 1) * bs > n_patches:
-            end = n_patches
-        else:
-            end = (batch_idx + 1) * bs
-    else:
-        end = (batch_idx + 1) * bs
-    data_a = patches[batch_idx * bs: end, :, :, :].astype(np.float32)
-    data_a = torch.from_numpy(data_a)
-    data_a = data_a.cuda()
-    data_a = Variable(data_a, volatile=True)
-    # compute output
-    out_a = model(data_a)
-    descriptors_for_net[batch_idx * bs: end,:] = out_a.data.cpu().numpy().reshape(-1, 128)
-print descriptors_for_net.shape
-et  = time.time() - t
-print 'processing', et, et/float(n_patches), ' per patch'
-np.savetxt(output_fname, descriptors_for_net, delimiter=' ', fmt='%10.5f')    
+    t = time.time()
+    patches = np.ndarray((n_patches, 1, 32, 32), dtype=np.float32)
+    for i in range(n_patches):
+        patch =  image[i*(w): (i+1)*(w), 0:w]
+        patches[i,0,:,:] = cv2.resize(patch,(32,32)) / 255.
+    patches -= 0.443728476019
+    patches /= 0.20197947209
+    bs = 128
+    outs = []
+    n_batches = int(n_patches / bs) + 1
+    t = time.time()
+
+    descriptors_for_net = np.zeros((len(patches), 128))
+    for i in range(0, len(patches), bs):
+
+        data_a = patches[i: i + bs, :, :, :].astype(np.float32)
+        data_a = torch.from_numpy(data_a)
+        data_a = data_a.cuda()
+        data_a = Variable(data_a, volatile=True)
+        # compute output
+        out_a = model(data_a)
+        descriptors_for_net[i: i + bs,:] = out_a.data.cpu().numpy().reshape(-1, 128)
+    print(descriptors_for_net.shape)
+
+    assert n_patches == descriptors_for_net.shape[0]
+    et  = time.time() - t
+    print('processing', et, et/float(n_patches), ' per patch')
+    np.savetxt(output_fname, descriptors_for_net, delimiter=' ', fmt='%10.5f')
