@@ -3,11 +3,11 @@
 HardNet model implementation in PyTorch for NIPS 2017 paper ["Working hard to know your neighbor's margins: Local descriptor learning loss"](https://arxiv.org/abs/1705.10872)
 [poster](http://cmp.felk.cvut.cz/~mishkdmy/posters/hardnet2017.pdf), [slides](http://cmp.felk.cvut.cz/~mishkdmy/slides/HardNet2017.pdf)
 
-## Benchmark on [HPatches](https://github.com/hpatches/hpatches-benchmark)
+## Benchmark on [HPatches](https://github.com/hpatches/hpatches-benchmark), mAP
 ![HPatches-results](img/hardnet-hpatches.jpg)
 
 
-## Retrieval on Oxford5k
+## Retrieval on Oxford5k, mAP
 
 | Descriptor    | BoW  |  BoW + SV | BoW + SV + QE | HQE + MA |
 | -----    | ----  |  ---- | ---- | ---- |
