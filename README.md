@@ -38,6 +38,10 @@ Logs are stored in tensorboard format in directory logs/
 
 Pre-trained models can be found in folder pretrained:  train_liberty and train_liberty_with_aug
 
+## 3rd party pre-trained models
+
+Rahul Mitra presented new [large-scale patch PS-dataset](https://github.com/rmitra/PS-Dataset) and trained even better HardNet on it. Weights are [here](https://www.dropbox.com/s/q89g5kfuke6c348/hardnet-PS.t7?dl=1) here, unfortunately in Torch format, not PyTorch.
+
 ## Usage example
 
 We provide an example, how to describe patches with HardNet. Script expects patches in [HPatches](https://github.com/hpatches/hpatches-benchmark) format, i.e. grayscale image with w = patch_size and h = n_patches * patch_size
