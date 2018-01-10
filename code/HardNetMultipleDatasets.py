@@ -31,7 +31,7 @@ import numpy as np
 import random
 import cv2
 import copy
-from EvalMetrics import ErrorRateAt95Recall, ErrorRateFDRAt95Recall, convertFDR2FPR, convertFPR2FDR
+from EvalMetrics import ErrorRateAt95Recall#, ErrorRateFDRAt95Recall, convertFDR2FPR, convertFPR2FDR
 from Losses import loss_HardNet, loss_random_sampling, loss_L2Net, global_orthogonal_regularization
 from W1BS import w1bs_extract_descs_and_save
 from Utils import L2Norm, cv2_scale, np_reshape
@@ -72,7 +72,7 @@ parser.add_argument('--model-dir', default='../models/',
                     help='folder to output model checkpoints')
 parser.add_argument('--experiment-name', default='/multiple_datasets_all/',
                     help='experiment path')
-parser.add_argument('--training-set', default='notredame',
+parser.add_argument('--training-set', default='all',
                     help='Other options: notredame, yosemite')
 parser.add_argument('--loss', default='triplet_margin',
                     help='Other options: softmax, contrastive')
@@ -106,7 +106,7 @@ parser.add_argument('--test-batch-size', type=int, default=128, metavar='BST',
                     help='input batch size for testing (default: 1024)')
 parser.add_argument('--n-triplets', type=int, default=1000, metavar='N',
                     help='how many triplets will generate from the dataset')
-parser.add_argument('--margin', type=float, default=0.7, metavar='MARGIN',
+parser.add_argument('--margin', type=float, default=1.0, metavar='MARGIN',
                     help='the margin value for the triplet loss function (default: 1.0')
 parser.add_argument('--gor', type=str2bool, default=False,
                     help='use gor')
@@ -114,8 +114,8 @@ parser.add_argument('--alpha', type=float, default=1.0, metavar='ALPHA',
                     help='gor parameter')
 parser.add_argument('--act-decay', type=float, default=0,
                     help='activity L2 decay, default 0')
-parser.add_argument('--lr', type=float, default=0.1, metavar='LR',
-                    help='learning rate (default: 0.1)')
+parser.add_argument('--lr', type=float, default=10.0, metavar='LR',
+                    help='learning rate (default: 10.0)')
 parser.add_argument('--fliprot', type=str2bool, default=True,
                     help='turns on flip and 90deg rotation augmentation')
 parser.add_argument('--lr-decay', default=1e-6, type=float, metavar='LRD',
@@ -179,11 +179,9 @@ class TotalDatasetsLoader(data.Dataset):
 
     def __init__(self, datasets_path, train = True, transform = None, batch_size = None, n_triplets = 5000000, fliprot = False, *arg, **kw):
         super(TotalDatasetsLoader, self).__init__()
-
-        datasets_path = [os.path.join(datasets_path, dataset) for dataset in os.listdir(datasets_path)]
-
+        datasets_path = [os.path.join(datasets_path, dataset) for dataset in os.listdir(datasets_path) if '.pt' in dataset]
         datasets = [torch.load(dataset) for dataset in datasets_path]
-
+        print (datasets_path)
         data, labels = datasets[0][0], datasets[0][1]
 
         for i in range(1,len(datasets)):
@@ -277,15 +275,13 @@ class TripletPhotoTour(dset.PhotoTour):
     note: a triplet is composed by a pair of matching images and one of
     different class.
     """
-
-    def __init__(self, train=True, transform=None, batch_size=None, load_random_triplets=False, *arg, **kw):
+    def __init__(self, train=True, transform=None, n_triplets = 1000, batch_size=None, load_random_triplets=False, *arg, **kw):
         super(TripletPhotoTour, self).__init__(*arg, **kw)
         self.transform = transform
         self.out_triplets = load_random_triplets
         self.train = train
-        self.n_triplets = args.n_triplets
+        self.n_triplets = n_triplets
         self.batch_size = batch_size
-
         if self.train:
             print('Generating {} triplets'.format(self.n_triplets))
             self.triplets = self.generate_triplets(self.labels, self.n_triplets)
@@ -399,7 +395,7 @@ class HardNet(nn.Module):
             nn.Conv2d(128, 128, kernel_size=3, padding=1, bias=False),
             nn.BatchNorm2d(128, affine=False),
             nn.ReLU(),
-            nn.Dropout(0.25),
+            nn.Dropout(0.3),
             nn.Conv2d(128, 128, kernel_size=8, bias=False),
             nn.BatchNorm2d(128, affine=False),
         )
@@ -408,7 +404,7 @@ class HardNet(nn.Module):
 
     def input_norm(self, x):
         flat = x.view(x.size(0), -1)
-        mp = torch.sum(flat, dim=1) / (32. * 32.)
+        mp = torch.mean(flat, dim=1)
         sp = torch.std(flat, dim=1) + 1e-7
         return (x - mp.unsqueeze(-1).unsqueeze(-1).unsqueeze(-1).expand_as(x)) / sp.unsqueeze(-1).unsqueeze(
             -1).unsqueeze(1).expand_as(x)
@@ -421,7 +417,7 @@ class HardNet(nn.Module):
 
 def weights_init(m):
     if isinstance(m, nn.Conv2d):
-        nn.init.orthogonal(m.weight.data, gain=0.7)
+        nn.init.orthogonal(m.weight.data, gain=0.6)
         try:
             nn.init.constant(m.bias.data, 0.01)
         except:
@@ -431,10 +427,8 @@ def weights_init(m):
 
 def create_loaders(load_random_triplets=False):
     test_dataset_names = copy.copy(dataset_names)
-    test_dataset_names.remove(args.training_set)
-
+    #test_dataset_names.remove(args.training_set)
     kwargs = {'num_workers': args.num_workers, 'pin_memory': args.pin_memory} if args.cuda else {}
-
     transform = transforms.Compose([
         transforms.Lambda(cv2_scale),
         transforms.Lambda(np_reshape),
@@ -458,6 +452,7 @@ def create_loaders(load_random_triplets=False):
                      'dataloader': torch.utils.data.DataLoader(
                          TripletPhotoTour(train=False,
                                           batch_size=args.test_batch_size,
+                                          n_triplets = 1000,
                                           root=args.dataroot,
                                           name=name,
                                           download=True,
@@ -510,15 +505,18 @@ def train(train_loader, model, optimizer, epoch, logger, load_triplets=False):
 
         if args.gor:
             loss += args.alpha * global_orthogonal_regularization(out_a, out_n)
-
         optimizer.zero_grad()
         loss.backward()
         optimizer.step()
         adjust_learning_rate(optimizer)
-
+        if batch_idx % args.log_interval == 0:
+            pbar.set_description(
+                'Train Epoch: {} [{}/{} ({:.0f}%)]\tLoss: {:.6f}'.format(
+                    epoch, batch_idx * len(data_a), len(train_loader.dataset),
+                           100. * batch_idx / len(train_loader),
+                    loss.data[0]))
     if (args.enable_logging):
         logger.log_value('loss', loss.data[0]).step()
-
     try:
         os.stat('{}{}'.format(args.model_dir, suffix))
     except:
@@ -559,21 +557,21 @@ def test(test_loader, model, epoch, logger, logger_test_name):
     distances = np.vstack(distances).reshape(num_tests)
 
     fpr95 = ErrorRateAt95Recall(labels, 1.0 / (distances + 1e-8))
-    fdr95 = ErrorRateFDRAt95Recall(labels, 1.0 / (distances + 1e-8))
+    #fdr95 = ErrorRateFDRAt95Recall(labels, 1.0 / (distances + 1e-8))
 
-    fpr2 = convertFDR2FPR(fdr95, 0.95, 50000, 50000)
-    fpr2fdr = convertFPR2FDR(fpr2, 0.95, 50000, 50000)
+    #fpr2 = convertFDR2FPR(fdr95, 0.95, 50000, 50000)
+    #fpr2fdr = convertFPR2FDR(fpr2, 0.95, 50000, 50000)
 
-    print('\33[91mTest set: Accuracy(FDR95): {:.8f}\n\33[0m'.format(fdr95))
+    #print('\33[91mTest set: Accuracy(FDR95): {:.8f}\n\33[0m'.format(fdr95))
     print('\33[91mTest set: Accuracy(FPR95): {:.8f}\n\33[0m'.format(fpr95))
-    print('\33[91mTest set: Accuracy(FDR2FPR): {:.8f}\n\33[0m'.format(fpr2))
-    print('\33[91mTest set: Accuracy(FPR2FDR): {:.8f}\n\33[0m'.format(fpr2fdr))
+    #print('\33[91mTest set: Accuracy(FDR2FPR): {:.8f}\n\33[0m'.format(fpr2))
+    #print('\33[91mTest set: Accuracy(FPR2FDR): {:.8f}\n\33[0m'.format(fpr2fdr))
 
-    fpr2 = convertFDR2FPR(round(fdr95,2), 0.95, 50000, 50000)
-    fpr2fdr = convertFPR2FDR(round(fpr2,2), 0.95, 50000, 50000)
+    #fpr2 = convertFDR2FPR(round(fdr95,2), 0.95, 50000, 50000)
+    #fpr2fdr = convertFPR2FDR(round(fpr2,2), 0.95, 50000, 50000)
 
-    print('\33[91mTest set: Accuracy(FDR2FPR): {:.8f}\n\33[0m'.format(fpr2))
-    print('\33[91mTest set: Accuracy(FPR2FDR): {:.8f}\n\33[0m'.format(fpr2fdr))
+    #print('\33[91mTest set: Accuracy(FDR2FPR): {:.8f}\n\33[0m'.format(fpr2))
+    #print('\33[91mTest set: Accuracy(FPR2FDR): {:.8f}\n\33[0m'.format(fpr2fdr))
 
     if (args.enable_logging):
         logger.log_value(logger_test_name + ' fpr95', fpr95)
@@ -635,13 +633,10 @@ def main(train_loader, test_loaders, model, logger, file_logger):
     end = start + args.epochs
     for epoch in range(start, end):
         # iterate over test loaders and test results
-
-        train_loader, test_loaders2 = create_loaders(load_random_triplets=triplet_flag)
-
+        #train_loader, test_loaders2 = create_loaders(load_random_triplets=triplet_flag)
         train(train_loader, model, optimizer1, epoch, logger, triplet_flag)
         for test_loader in test_loaders:
             test(test_loader['dataloader'], model, epoch, logger, test_loader['name'])
-
         if TEST_ON_W1BS:
             # print(weights_path)
             patch_images = w1bs.get_list_of_patch_images(
@@ -684,9 +679,7 @@ if __name__ == '__main__':
     model = HardNet()
     if (args.enable_logging):
         from Loggers import Logger, FileLogger
-
         logger = Logger(LOG_DIR)
         # file_logger = FileLogger(./log/+suffix)
-
     train_loader, test_loaders = create_loaders(load_random_triplets=triplet_flag)
     main(train_loader, test_loaders, model, logger, file_logger)

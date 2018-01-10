@@ -47,10 +47,8 @@ class HPatches(data.Dataset):
         return torch.ByteTensor(np.array(patches, dtype=np.uint8)), torch.LongTensor(labels)
 
 if __name__ == '__main__':
-
     # need to be specified
     path_to_hpatches_directory = '/home/dagnyt/hpatches-release/'
-
     hPatches = HPatches()
     images, labels = hPatches.read_image_file(path_to_hpatches_directory)
     datasets_path = os.path.abspath(__file__ + "/../../../")

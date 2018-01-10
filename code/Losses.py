@@ -97,7 +97,7 @@ def loss_HardNet(anchor, positive, anchor_swap = False, anchor_ave = False,\
     # steps to filter out same patches that occur in distance matrix as negatives
     pos1 = torch.diag(dist_matrix)
     dist_without_min_on_diag = dist_matrix+eye*10
-    mask = (dist_without_min_on_diag.ge(0.008)-1)*-1
+    mask = (dist_without_min_on_diag.ge(0.008).float()-1.0)*(-1)
     mask = mask.type_as(dist_without_min_on_diag)*10
     dist_without_min_on_diag = dist_without_min_on_diag+mask
     if batch_reduce == 'min':
