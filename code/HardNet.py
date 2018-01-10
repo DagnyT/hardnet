@@ -62,7 +62,7 @@ parser.add_argument('--w1bsroot', type=str,
 parser.add_argument('--dataroot', type=str,
                     default='../datasets/',
                     help='path to dataset')
-parser.add_argument('--enable-logging',type=str2bool, default=True,
+parser.add_argument('--enable-logging',type=str2bool, default=False,
                     help='output to tensorlogger')
 parser.add_argument('--log-dir', default='../logs/',
                     help='folder to output log')
@@ -76,7 +76,7 @@ parser.add_argument('--loss', default= 'triplet_margin',
                     help='Other options: softmax, contrastive')
 parser.add_argument('--batch-reduce', default= 'min',
                     help='Other options: average, random, random_global, L2Net')
-parser.add_argument('--num-workers', default= 1,
+parser.add_argument('--num-workers', default= 4,
                     help='Number of workers to be created')
 parser.add_argument('--pin-memory',type=bool, default= True,
                     help='')
@@ -112,8 +112,8 @@ parser.add_argument('--alpha', type=float, default=1.0, metavar='ALPHA',
                     help='gor parameter')
 parser.add_argument('--act-decay', type=float, default=0,
                     help='activity L2 decay, default 0')
-parser.add_argument('--lr', type=float, default=0.1, metavar='LR',
-                    help='learning rate (default: 0.1)')
+parser.add_argument('--lr', type=float, default=10.0, metavar='LR',
+                    help='learning rate (default: 10.0. Yes, ten is not typo)')
 parser.add_argument('--fliprot', type=str2bool, default=False,
                     help='turns on flip and 90deg rotation augmentation')
 parser.add_argument('--lr-decay', default=1e-6, type=float, metavar='LRD',
@@ -297,7 +297,7 @@ class HardNet(nn.Module):
             nn.Conv2d(128, 128, kernel_size=3, padding=1, bias = False),
             nn.BatchNorm2d(128, affine=False),
             nn.ReLU(),
-            nn.Dropout(0.1),
+            nn.Dropout(0.3),
             nn.Conv2d(128, 128, kernel_size=8, bias = False),
             nn.BatchNorm2d(128, affine=False),
         )
@@ -317,7 +317,7 @@ class HardNet(nn.Module):
 
 def weights_init(m):
     if isinstance(m, nn.Conv2d):
-        nn.init.orthogonal(m.weight.data, gain=0.7)
+        nn.init.orthogonal(m.weight.data, gain=0.6)
         try:
             nn.init.constant(m.bias.data, 0.01)
         except:
@@ -567,6 +567,5 @@ if __name__ == '__main__':
         from Loggers import Logger, FileLogger
         logger = Logger(LOG_DIR)
         #file_logger = FileLogger(./log/+suffix)
-
     train_loader, test_loaders = create_loaders(load_random_triplets = triplet_flag)
     main(train_loader, test_loaders, model, logger, file_logger)
