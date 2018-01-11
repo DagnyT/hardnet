@@ -64,7 +64,7 @@ parser.add_argument('--w1bsroot', type=str,
 parser.add_argument('--dataroot', type=str,
                     default='../datasets/',
                     help='path to dataset')
-parser.add_argument('--enable-logging', type=str2bool, default=True,
+parser.add_argument('--enable-logging', type=str2bool, default=False,
                     help='output to tensorlogger')
 parser.add_argument('--log-dir', default='../logs/',
                     help='folder to output log')
@@ -100,9 +100,9 @@ parser.add_argument('--epochs', type=int, default=10, metavar='E',
                     help='number of epochs to train (default: 10)')
 parser.add_argument('--anchorswap', type=bool, default=True,
                     help='turns on anchor swap')
-parser.add_argument('--batch-size', type=int, default=128, metavar='BS',
+parser.add_argument('--batch-size', type=int, default=1024, metavar='BS',
                     help='input batch size for training (default: 1024)')
-parser.add_argument('--test-batch-size', type=int, default=128, metavar='BST',
+parser.add_argument('--test-batch-size', type=int, default=1024, metavar='BST',
                     help='input batch size for testing (default: 1024)')
 parser.add_argument('--n-triplets', type=int, default=1000, metavar='N',
                     help='how many triplets will generate from the dataset')

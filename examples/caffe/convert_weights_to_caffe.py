@@ -120,6 +120,7 @@ mws = [
 "../../pretrained/train_notredame/checkpoint_notredame_no_aug.pth",
 "../../pretrained/train_yosemite_with_aug/checkpoint_yosemite_with_aug.pth",
 "../../pretrained/pretrained_all_datasets/HardNet++.pth"
+"../../pretrained/pretrained_all_datasets/HardNetFullBrown.pth"
     ]
 
 for model_weights in mws:
