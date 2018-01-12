@@ -54,6 +54,9 @@ Rahul Mitra presented new [large-scale patch PS-dataset](https://github.com/rmit
 
 Converted PyTorch version is [here](pretrained/3rd_party/HardNetPS/).
 
+![HardNet-Datasets-results](img/hardnet-datasets.png)
+
+
 ## Which weights should I use?
 
 For practical applications, we recommend [HardNet++](pretrained/pretrained_all_datasets/HardNet++.pth').
