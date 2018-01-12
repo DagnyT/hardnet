@@ -114,13 +114,13 @@ model.cuda()
     
 mws = [
 "../../pretrained/train_liberty_with_aug/checkpoint_liberty_with_aug.pth",
-"../../pretrained/train_yosemite/checkpoint_yosemite_no_aug.pth",
+#"../../pretrained/train_yosemite/checkpoint_yosemite_no_aug.pth",
 "../../pretrained/train_liberty/checkpoint_liberty_no_aug.pth",
-"../../pretrained/train_notredame_with_aug/checkpoint_notredame_with_aug.pth",
-"../../pretrained/train_notredame/checkpoint_notredame_no_aug.pth",
-"../../pretrained/train_yosemite_with_aug/checkpoint_yosemite_with_aug.pth",
-"../../pretrained/pretrained_all_datasets/HardNet++.pth"
-"../../pretrained/pretrained_all_datasets/HardNetFullBrown.pth"
+#"../../pretrained/train_notredame_with_aug/checkpoint_notredame_with_aug.pth",
+#"../../pretrained/train_notredame/checkpoint_notredame_no_aug.pth",
+#"../../pretrained/train_yosemite_with_aug/checkpoint_yosemite_with_aug.pth",
+#"../../pretrained/pretrained_all_datasets/HardNet++.pth"
+"../../pretrained/6Brown/hardnetBr6.pth"
     ]
 
 for model_weights in mws:
