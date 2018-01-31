@@ -13,7 +13,6 @@ import cv2
 import math
 import numpy as np
 
-
 class L2Norm(nn.Module):
     def __init__(self):
         super(L2Norm,self).__init__()
@@ -77,22 +76,26 @@ class HardNet(nn.Module):
     
 
 if __name__ == '__main__':
-
-    model_weights = '../pretrained/train_liberty_with_aug/checkpoint_liberty_with_aug.pth'
-
-    model = HardNet()
-    model.cuda()
-
-    checkpoint = torch.load(model_weights)
-    model.load_state_dict(checkpoint['state_dict'])
-    model.eval()
+    DO_CUDA = True
     try:
           input_img_fname = sys.argv[1]
           output_fname = sys.argv[2]
+          if len(sys.argv) > 3:
+              DO_CUDA = sys.argv[3] != 'cpu'
     except:
-          print("Wrong input format. Try ./extract_hardnet_desc_from_hpatches_file.py imgs/ref.png out.txt")
+          print("Wrong input format. Try ./extract_hardnet_desc_from_hpatches_file.py imgs/ref.png out.txt gpu")
           sys.exit(1)
-
+    model_weights = '../pretrained/train_liberty_with_aug/checkpoint_liberty_with_aug.pth'
+    model = HardNet()
+    checkpoint = torch.load(model_weights)
+    model.load_state_dict(checkpoint['state_dict'])
+    model.eval()
+    if DO_CUDA:
+        model.cuda()
+        print('Extracting on GPU')
+    else:
+        print('Extracting on CPU')
+        model = model.cpu()
     image = cv2.imread(input_img_fname,0)
     h,w = image.shape
     print(h,w)
@@ -112,19 +115,18 @@ if __name__ == '__main__':
     outs = []
     n_batches = int(n_patches / bs) + 1
     t = time.time()
-
     descriptors_for_net = np.zeros((len(patches), 128))
     for i in range(0, len(patches), bs):
-
         data_a = patches[i: i + bs, :, :, :].astype(np.float32)
         data_a = torch.from_numpy(data_a)
-        data_a = data_a.cuda()
-        data_a = Variable(data_a, volatile=True)
+        if DO_CUDA:
+            data_a = data_a.cuda()
+        data_a = Variable(data_a)
         # compute output
-        out_a = model(data_a)
+        with torch.no_grad():
+            out_a = model(data_a)
         descriptors_for_net[i: i + bs,:] = out_a.data.cpu().numpy().reshape(-1, 128)
     print(descriptors_for_net.shape)
-
     assert n_patches == descriptors_for_net.shape[0]
     et  = time.time() - t
     print('processing', et, et/float(n_patches), ' per patch')
