@@ -38,7 +38,7 @@ class LocalNorm2d(nn.Module):
 class DenseHardNet(nn.Module):
     """HardNet model definition
     """
-    def __init__(self):
+    def __init__(self, _stride = 2):
         super(DenseHardNet, self).__init__()
         self.input_norm = LocalNorm2d(17)
         self.features = nn.Sequential(
@@ -48,13 +48,13 @@ class DenseHardNet(nn.Module):
             nn.Conv2d(32, 32, kernel_size=3, padding=1, bias = False),
             nn.BatchNorm2d(32, affine=False),
             nn.ReLU(),
-            nn.Conv2d(32, 64, kernel_size=3, stride=2, padding=1, bias = False),
+            nn.Conv2d(32, 64, kernel_size=3, stride=_stride, padding=1, bias = False),
             nn.BatchNorm2d(64, affine=False),
             nn.ReLU(),
             nn.Conv2d(64, 64, kernel_size=3, padding=1, bias = False),
             nn.BatchNorm2d(64, affine=False),
             nn.ReLU(),
-            nn.Conv2d(64, 128, kernel_size=3, stride=2,padding=1, bias = False),
+            nn.Conv2d(64, 128, kernel_size=3, stride=_stride,padding=1, bias = False),
             nn.BatchNorm2d(128, affine=False),
             nn.ReLU(),
             nn.Conv2d(128, 128, kernel_size=3, padding=1, bias = False),
@@ -85,19 +85,23 @@ def load_grayscale_var(fname):
 
 if __name__ == '__main__':
     DO_CUDA = True
-    DO_FULL_SIZE = False
+    UPSCALE = False
+    stride = 2;
     try:
           input_img_fname = sys.argv[1]
           output_fname = sys.argv[2]
           if len(sys.argv) > 3:
               DO_CUDA = sys.argv[3] != 'cpu'
           if len(sys.argv) > 4:
-              DO_FULL_SIZE = sys.argv[4] == 'UPSCALE'
+              UPSCALE = sys.argv[4] == 'UPSCALE'
+              if  sys.argv[4] == 'NOSTRIDE':
+                  stride = 1
+              
     except:
           print("Wrong input format. Try ./extract_DenseHardNet.py imgs/ref.png out.txt gpu")
           sys.exit(1)
     model_weights = '../pretrained/pretrained_all_datasets/HardNet++.pth'
-    model = DenseHardNet()
+    model = DenseHardNet(stride)
     checkpoint = torch.load(model_weights)
     model.load_state_dict(checkpoint['state_dict'])
     model.eval()
@@ -111,10 +115,10 @@ if __name__ == '__main__':
         model = model.cpu()
     t = time.time()
     with torch.no_grad():
-        desc = model(img, DO_FULL_SIZE)
+        desc = model(img, UPSCALE)
     et  = time.time() - t
     print('processing', et)
     desc_numpy = desc.cpu().detach().float().squeeze().numpy();
     desc_numpy = np.clip(((desc_numpy + 0.45) * 210.0).astype(np.int32), 0, 255).astype(np.uint8)
-    print desc_numpy.shape
+    print(desc_numpy.shape)
     np.save(output_fname, desc_numpy)
