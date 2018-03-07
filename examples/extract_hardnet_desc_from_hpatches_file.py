@@ -8,7 +8,6 @@ from torch.autograd import Variable
 import torch.backends.cudnn as cudnn
 import time
 import os
-sys.path.insert(0, '/home/ubuntu/dev/opencv-3.1/build/lib')
 import cv2
 import math
 import numpy as np

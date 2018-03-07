@@ -42,7 +42,6 @@ import torch.utils.data as data_utils
 import torch.nn.functional as F
 from Losses import loss_HardNet, loss_random_sampling, loss_L2Net
 
-sys.path.insert(0, '/home/dagnyt/faiss/faiss/')
 import faiss
 
 # Training settings
@@ -50,18 +49,18 @@ parser = argparse.ArgumentParser(description='PyTorch HardNet')
 # Model options
 
 parser.add_argument('--w1bsroot', type=str,
-                    default='wxbs-descriptors-benchmark/code',
+                    default='data/sets/wxbs-descriptors-benchmark/code/',
                     help='path to dataset')
 parser.add_argument('--dataroot', type=str,
-                    default='datasets/',
+                    default='data/sets/',
                     help='path to dataset')
 parser.add_argument('--resume', default='', type=str, metavar='PATH',
                     help='path to latest checkpoint (default: none)')
 parser.add_argument('--enable-logging',type=bool, default=True,
                     help='folder to output model checkpoints')
-parser.add_argument('--log-dir', default='./logs',
+parser.add_argument('--log-dir', default='data/logs/',
                     help='folder to output model checkpoints')
-parser.add_argument('--experiment-name', default= '/liberty_train_hard_mining/',
+parser.add_argument('--experiment-name', default= 'liberty_train_hard_mining/',
                     help='experiment path')
 parser.add_argument('--decor',type=str2bool, default = False,
                     help='L2Net decorrelation penalty')

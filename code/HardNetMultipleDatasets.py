@@ -59,18 +59,18 @@ parser = argparse.ArgumentParser(description='PyTorch HardNet')
 # Model options
 
 parser.add_argument('--w1bsroot', type=str,
-                    default='../wxbs-descriptors-benchmark/code',
+                    default='data/sets/wxbs-descriptors-benchmark/code',
                     help='path to dataset')
 parser.add_argument('--dataroot', type=str,
-                    default='../datasets/',
+                    default='data/sets/',
                     help='path to dataset')
 parser.add_argument('--enable-logging', type=str2bool, default=False,
                     help='output to tensorlogger')
-parser.add_argument('--log-dir', default='../logs/',
+parser.add_argument('--log-dir', default='data/logs/',
                     help='folder to output log')
-parser.add_argument('--model-dir', default='../models/',
+parser.add_argument('--model-dir', default='data/models/',
                     help='folder to output model checkpoints')
-parser.add_argument('--experiment-name', default='/multiple_datasets_all/',
+parser.add_argument('--experiment-name', default='multiple_datasets_all/',
                     help='experiment path')
 parser.add_argument('--training-set', default='all',
                     help='Other options: notredame, yosemite')

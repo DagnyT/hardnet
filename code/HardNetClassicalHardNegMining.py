@@ -41,7 +41,6 @@ import torch.utils.data as data
 import torch.utils.data as data_utils
 import torch.nn.functional as F
 
-sys.path.insert(0, '/home/old-ufo/dev/faiss/')
 import faiss
 
 # Training settings
@@ -49,18 +48,18 @@ parser = argparse.ArgumentParser(description='PyTorch HardNet')
 # Model options
 
 parser.add_argument('--w1bsroot', type=str,
-                    default='wxbs-descriptors-benchmark/code',
+                    default='data/sets/wxbs-descriptors-benchmark/code',
                     help='path to dataset')
 parser.add_argument('--dataroot', type=str,
-                    default='datasets/',
+                    default='data/sets/',
                     help='path to dataset')
 parser.add_argument('--resume', default='', type=str, metavar='PATH',
                     help='path to latest checkpoint (default: none)')
 parser.add_argument('--enable-logging',type=bool, default=True,
                     help='folder to output model checkpoints')
-parser.add_argument('--log-dir', default='./logs',
+parser.add_argument('--log-dir', default='data/logs/',
                     help='folder to output model checkpoints')
-parser.add_argument('--experiment-name', default= '/liberty_train_hard_mining/',
+parser.add_argument('--experiment-name', default= 'liberty_train_hard_mining/',
                     help='experiment path')
 parser.add_argument('--training-set', default= 'liberty',
                     help='Other options: notredame, yosemite')

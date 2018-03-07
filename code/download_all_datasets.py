@@ -25,8 +25,8 @@ import cv2
 import copy
 from Utils import str2bool
 
-from dataset import  TripletPhotoTour
-root='/local/temporary/mishkdmy/datasets/PhotoTourism/'
+from dataset import TripletPhotoTour
+root='../data/sets'
 train_loader = torch.utils.data.DataLoader(
         TripletPhotoTour(train=True,
                          batch_size=128,

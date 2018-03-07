@@ -57,16 +57,16 @@ parser = argparse.ArgumentParser(description='PyTorch HardNet')
 # Model options
 
 parser.add_argument('--w1bsroot', type=str,
-                    default='../wxbs-descriptors-benchmark/code',
+                    default='data/sets/wxbs-descriptors-benchmark/code/',
                     help='path to dataset')
 parser.add_argument('--dataroot', type=str,
-                    default='/home/dagnyt/hardnet/datasets/',
+                    default='data/sets/',
                     help='path to dataset')
 parser.add_argument('--enable-logging',type=str2bool, default=False,
                     help='output to tensorlogger')
-parser.add_argument('--log-dir', default='/home/dagnyt/hardnet/logs/',
+parser.add_argument('--log-dir', default='data/logs/',
                     help='folder to output log')
-parser.add_argument('--model-dir', default='/home/dagnyt/hardnet/models/',
+parser.add_argument('--model-dir', default='data/models/',
                     help='folder to output model checkpoints')
 parser.add_argument('--experiment-name', default= '/notredame_train/',
                     help='experiment path')
@@ -161,6 +161,8 @@ if os.path.isdir(args.w1bsroot):
 os.environ['CUDA_VISIBLE_DEVICES'] = args.gpu_id
 
 args.cuda = not args.no_cuda and torch.cuda.is_available()
+
+print (("NOT " if args.cuda else "") + "Using cuda")
 
 if args.cuda:
     cudnn.benchmark = True
@@ -562,8 +564,8 @@ if __name__ == '__main__':
     LOG_DIR = args.log_dir
     if not os.path.isdir(LOG_DIR):
         os.makedirs(LOG_DIR)
-    LOG_DIR = os.path.join(args.log_dir,suffix)
-    DESCS_DIR = os.path.join(LOG_DIR,'temp_descs')
+    LOG_DIR = os.path.join(args.log_dir, suffix)
+    DESCS_DIR = os.path.join(LOG_DIR, 'temp_descs')
     if TEST_ON_W1BS:
         if not os.path.isdir(DESCS_DIR):
             os.makedirs(DESCS_DIR)
