@@ -5,6 +5,8 @@ import cv2
 import numpy as np
 
 # resize image to size 32x32
+cv2_scale36 = lambda x: cv2.resize(x, dsize=(36, 36),
+                                 interpolation=cv2.INTER_LINEAR)
 cv2_scale = lambda x: cv2.resize(x, dsize=(32, 32),
                                  interpolation=cv2.INTER_LINEAR)
 # reshape image

@@ -68,9 +68,9 @@ parser.add_argument('--log-dir', default='data/logs/',
                     help='folder to output log')
 parser.add_argument('--model-dir', default='data/models/',
                     help='folder to output model checkpoints')
-parser.add_argument('--experiment-name', default= '/notredame_train/',
+parser.add_argument('--experiment-name', default= 'liberty_train/',
                     help='experiment path')
-parser.add_argument('--training-set', default= 'notredame',
+parser.add_argument('--training-set', default= 'liberty',
                     help='Other options: notredame, yosemite')
 parser.add_argument('--loss', default= 'triplet_margin',
                     help='Other options: softmax, contrastive')
@@ -162,7 +162,7 @@ os.environ['CUDA_VISIBLE_DEVICES'] = args.gpu_id
 
 args.cuda = not args.no_cuda and torch.cuda.is_available()
 
-print (("NOT " if args.cuda else "") + "Using cuda")
+print (("NOT " if not args.cuda else "") + "Using cuda")
 
 if args.cuda:
     cudnn.benchmark = True
@@ -205,7 +205,7 @@ class TripletPhotoTour(dset.PhotoTour):
             return inds
 
         triplets = []
-        indices = create_indices(labels)
+        indices = create_indices(labels.numpy())
         unique_labels = np.unique(labels.numpy())
         n_classes = unique_labels.shape[0]
         # add only unique indices in batch

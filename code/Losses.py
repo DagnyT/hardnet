@@ -9,22 +9,23 @@ def distance_matrix_vector(anchor, positive):
     d2_sq = torch.sum(positive * positive, dim=1).unsqueeze(-1)
 
     eps = 1e-6
-    return torch.sqrt((d1_sq.repeat(1, anchor.size(0)) + torch.t(d2_sq.repeat(1, positive.size(0)))
+    return torch.sqrt((d1_sq.repeat(1, positive.size(0)) + torch.t(d2_sq.repeat(1, anchor.size(0)))
                       - 2.0 * torch.bmm(anchor.unsqueeze(0), torch.t(positive).unsqueeze(0)).squeeze(0))+eps)
 
-def distance_vectors_pairwise(anchor, positive, negative):
+def distance_vectors_pairwise(anchor, positive, negative = None):
     """Given batch of anchor descriptors and positive descriptors calculate distance matrix"""
 
     a_sq = torch.sum(anchor * anchor, dim=1)
     p_sq = torch.sum(positive * positive, dim=1)
-    n_sq = torch.sum(negative * negative, dim=1)
 
     eps = 1e-8
     d_a_p = torch.sqrt(a_sq + p_sq - 2*torch.sum(anchor * positive, dim = 1) + eps)
-    d_a_n = torch.sqrt(a_sq + n_sq - 2*torch.sum(anchor * negative, dim = 1) + eps)
-    d_p_n = torch.sqrt(p_sq + n_sq - 2*torch.sum(positive * negative, dim = 1) + eps)
-    return d_a_p, d_a_n, d_p_n
-
+    if negative is not None:
+        n_sq = torch.sum(negative * negative, dim=1)
+        d_a_n = torch.sqrt(a_sq + n_sq - 2*torch.sum(anchor * negative, dim = 1) + eps)
+        d_p_n = torch.sqrt(p_sq + n_sq - 2*torch.sum(positive * negative, dim = 1) + eps)
+        return d_a_p, d_a_n, d_p_n
+    return d_a_p
 def loss_random_sampling(anchor, positive, negative, anchor_swap = False, margin = 1.0, loss_type = "triplet_margin"):
     """Loss with random sampling (no hard in batch).
     """
@@ -151,7 +152,6 @@ def loss_HardNet(anchor, positive, anchor_swap = False, anchor_ave = False,\
         sys.exit(1)
     loss = torch.mean(loss)
     return loss
-
 
 def global_orthogonal_regularization(anchor, negative):
 
