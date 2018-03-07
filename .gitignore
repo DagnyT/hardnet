@@ -1,5 +1,14 @@
-logs/
-wxbs-descriptors-benchmark/
-datasets/
+# Data with which hardnet works
+data/
+
+
+# Other hardnet generated files
+*.npy
 *.log
+
+
+# Development files
+.idea/
+*.iml
+*.swp
 *.pyc
