@@ -20,7 +20,7 @@ mkdir -p "$DATALOGS"
 )
 
 ( # Run the code
-    cd "$SCRIPTPATH/.."
+    cd "$RUNPATH"
     python ./code/HardNet.py --w1bsroot "$DATASETS/wxbs-descriptors-benchmark/code/" --fliprot=False --experiment-name=liberty_train/ $@ | tee -a "$DATALOGS/log_HardNet_Lib.log"
     python ./code/HardNet.py --w1bsroot "$DATASETS/wxbs-descriptors-benchmark/code/" --fliprot=True --experiment-name=liberty_train_with_aug/  $@ | tee -a "$DATALOGS/log_HardNetPlus_Lib.log"
 )
