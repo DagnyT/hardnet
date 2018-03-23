@@ -40,7 +40,7 @@ class DenseHardNet(nn.Module):
     """
     def __init__(self, _stride = 2):
         super(DenseHardNet, self).__init__()
-        self.input_norm = LocalNorm2d(17)
+        self.input_norm = LocalNorm2d(31)
         self.features = nn.Sequential(
             nn.Conv2d(1, 32, kernel_size=3, padding=1, bias = False),
             nn.BatchNorm2d(32, affine=False),
@@ -54,7 +54,7 @@ class DenseHardNet(nn.Module):
             nn.Conv2d(64, 64, kernel_size=3, padding=1, bias = False),
             nn.BatchNorm2d(64, affine=False),
             nn.ReLU(),
-            nn.Conv2d(64, 128, kernel_size=3, stride=_stride,padding=1, bias = False),
+            nn.Conv2d(64, 128, kernel_size=3, stride=_stride, padding=1, bias = False),
             nn.BatchNorm2d(128, affine=False),
             nn.ReLU(),
             nn.Conv2d(128, 128, kernel_size=3, padding=1, bias = False),
@@ -62,20 +62,65 @@ class DenseHardNet(nn.Module):
             nn.ReLU(),
             nn.Dropout(0.1),
             nn.Conv2d(128, 128, kernel_size=8, bias = False),
-            nn.BatchNorm2d(128, affine=False),
-            L2Norm()
+            nn.BatchNorm2d(128, affine=False)
         )
         return
 
-    def forward(self, input, upscale = False):
+    def forward(self, input):
         if input.size(1) > 1:
-            feats = self.features(self.input_norm(input.mean(dim = 1, keepdim = True)))
+            ni = self.input_norm(input.mean(dim = 1, keepdim = True))
         else:
-            feats = self.features(self.input_norm(input))
-        if upscale:
-            return F.upsample(feats, (input.size(2), input.size(3)),mode='bilinear')
+            ni = self.input_norm(input)
+        ff = self.features(F.pad(ni, (14,14,14,14), 'reflect'))
+        feats = L2Norm()(F.upsample(ff, (input.size(2), input.size(3)),mode='bilinear'))
         return feats
     
+class AffNetFastFullConv(nn.Module):
+    def __init__(self, PS = 32, stride = 2):
+        super(AffNetFastFullConv, self).__init__()
+        self.lrn = LocalNorm2d(33)
+        self.features = nn.Sequential(
+            nn.Conv2d(1, 16, kernel_size=3, padding=1, bias = False),
+            nn.BatchNorm2d(16, affine=False),
+            nn.ReLU(),
+            nn.Conv2d(16, 16, kernel_size=3, stride=1, padding=1, bias = False),
+            nn.BatchNorm2d(16, affine=False),
+            nn.ReLU(),
+            nn.Conv2d(16, 32, kernel_size=3, stride=stride, padding=1, bias = False),
+            nn.BatchNorm2d(32, affine=False),
+            nn.ReLU(),
+            nn.Conv2d(32, 32, kernel_size=3, stride=1, padding=1, bias = False),
+            nn.BatchNorm2d(32, affine=False),
+            nn.ReLU(),
+            nn.Conv2d(32, 64, kernel_size=3, stride=stride, padding=1, bias = False),
+            nn.BatchNorm2d(64, affine=False),
+            nn.ReLU(),
+            nn.Conv2d(64, 64, kernel_size=3, stride=1, padding=1, bias = False),
+            nn.BatchNorm2d(64, affine=False),
+            nn.ReLU(),
+            nn.Dropout(0.25),
+            nn.Conv2d(64, 3, kernel_size=8, stride=1, padding = 0, bias = True),
+        )
+        self.stride = stride
+        self.PS = PS
+        self.features.apply(self.weights_init)
+        self.halfPS = int(PS/2)
+        return
+    def weights_init(self,m):
+        if isinstance(m, nn.Conv2d):
+            nn.init.orthogonal(m.weight.data, gain=0.8)
+            try:
+                nn.init.constant(m.bias.data, 0.01)
+            except:
+                pass
+        return
+    def forward(self, input, return_A_matrix = False):
+        norm_inp  = self.lrn(input)
+        ff = self.features(F.pad(norm_inp, (14,14,14,14), 'reflect'))
+        xy = F.tanh(F.upsample(ff, (input.size(2), input.size(3)),mode='bilinear'))
+        a0bc = torch.cat([1.0 + xy[:,0:1,:,:].contiguous(), 0*xy[:,1:2,:,:].contiguous(),
+                          xy[:,1:2,:,:].contiguous(),  1.0 + xy[:,2:,:,:].contiguous()], dim = 1).contiguous()
+        return rectifyAffineTransformationUpIsUpFullyConv(a0bc).contiguous()
 def load_grayscale_var(fname):
     img = Image.open(fname).convert('RGB')
     img = np.mean(np.array(img), axis = 2)
@@ -85,23 +130,17 @@ def load_grayscale_var(fname):
 
 if __name__ == '__main__':
     DO_CUDA = True
-    UPSCALE = False
-    stride = 2;
     try:
           input_img_fname = sys.argv[1]
           output_fname = sys.argv[2]
           if len(sys.argv) > 3:
               DO_CUDA = sys.argv[3] != 'cpu'
-          if len(sys.argv) > 4:
-              UPSCALE = sys.argv[4] == 'UPSCALE'
-              if  sys.argv[4] == 'NOSTRIDE':
-                  stride = 1
               
     except:
           print("Wrong input format. Try ./extract_DenseHardNet.py imgs/ref.png out.txt gpu")
           sys.exit(1)
     model_weights = '../pretrained/pretrained_all_datasets/HardNet++.pth'
-    model = DenseHardNet(stride)
+    model = DenseHardNet()
     checkpoint = torch.load(model_weights)
     model.load_state_dict(checkpoint['state_dict'])
     model.eval()
@@ -115,7 +154,7 @@ if __name__ == '__main__':
         model = model.cpu()
     t = time.time()
     with torch.no_grad():
-        desc = model(img, UPSCALE)
+        desc = model(img)
     et  = time.time() - t
     print('processing', et)
     desc_numpy = desc.cpu().detach().float().squeeze().numpy();
