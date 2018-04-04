@@ -16,6 +16,7 @@ If you use this code, please cite
 from __future__ import division, print_function
 import sys
 from copy import deepcopy
+import math
 import argparse
 import torch
 import torch.nn.init
@@ -31,6 +32,7 @@ import numpy as np
 import random
 import cv2
 import copy
+import PIL
 from EvalMetrics import ErrorRateAt95Recall
 from Losses import loss_HardNet, loss_random_sampling, loss_L2Net, global_orthogonal_regularization
 from W1BS import w1bs_extract_descs_and_save
@@ -76,7 +78,7 @@ parser.add_argument('--loss', default= 'triplet_margin',
                     help='Other options: softmax, contrastive')
 parser.add_argument('--batch-reduce', default= 'min',
                     help='Other options: average, random, random_global, L2Net')
-parser.add_argument('--num-workers', default= 4,
+parser.add_argument('--num-workers', default= 8,
                     help='Number of workers to be created')
 parser.add_argument('--pin-memory',type=bool, default= True,
                     help='')
@@ -108,14 +110,16 @@ parser.add_argument('--margin', type=float, default=1.0, metavar='MARGIN',
                     help='the margin value for the triplet loss function (default: 1.0')
 parser.add_argument('--gor',type=str2bool, default=False,
                     help='use gor')
+parser.add_argument('--freq', type=float, default=10.0,
+                    help='frequency for cyclic learning rate')
 parser.add_argument('--alpha', type=float, default=1.0, metavar='ALPHA',
                     help='gor parameter')
-parser.add_argument('--act-decay', type=float, default=0,
-                    help='activity L2 decay, default 0')
 parser.add_argument('--lr', type=float, default=10.0, metavar='LR',
                     help='learning rate (default: 10.0. Yes, ten is not typo)')
 parser.add_argument('--fliprot', type=str2bool, default=True,
                     help='turns on flip and 90deg rotation augmentation')
+parser.add_argument('--augmentation', type=str2bool, default=False,
+                    help='turns on shift and small scale rotation augmentation')
 parser.add_argument('--lr-decay', default=1e-6, type=float, metavar='LRD',
                     help='learning rate decay ratio (default: 1e-6')
 parser.add_argument('--wd', default=1e-4, type=float,
@@ -335,12 +339,27 @@ def create_loaders(load_random_triplets = False):
 
     kwargs = {'num_workers': args.num_workers, 'pin_memory': args.pin_memory} if args.cuda else {}
 
+    np_reshape64 = lambda x: np.reshape(x, (64, 64, 1))
+    transform_test = transforms.Compose([
+            transforms.Lambda(np_reshape64),
+            transforms.ToPILImage(),
+            transforms.Resize(32),
+            transforms.ToTensor()])
+    transform_train = transforms.Compose([
+            transforms.Lambda(np_reshape64),
+            transforms.ToPILImage(),
+            transforms.RandomRotation(5,PIL.Image.BILINEAR),
+            transforms.RandomResizedCrop(32, scale = (0.9,1.0),ratio = (0.9,1.1)),
+            transforms.Resize(32),
+            transforms.ToTensor()])
     transform = transforms.Compose([
             transforms.Lambda(cv2_scale),
             transforms.Lambda(np_reshape),
             transforms.ToTensor(),
             transforms.Normalize((args.mean_image,), (args.std_image,))])
-
+    if not args.augmentation:
+        transform_train = transform
+        transform_test = transform
     train_loader = torch.utils.data.DataLoader(
             TripletPhotoTour(train=True,
                              load_random_triplets = load_random_triplets,
@@ -348,7 +367,7 @@ def create_loaders(load_random_triplets = False):
                              root=args.dataroot,
                              name=args.training_set,
                              download=True,
-                             transform=transform),
+                             transform=transform_train),
                              batch_size=args.batch_size,
                              shuffle=False, **kwargs)
 
@@ -359,7 +378,7 @@ def create_loaders(load_random_triplets = False):
                      root=args.dataroot,
                      name=name,
                      download=True,
-                     transform=transform),
+                     transform=transform_test),
                         batch_size=args.test_batch_size,
                         shuffle=False, **kwargs)}
                     for name in test_dataset_names]
@@ -411,7 +430,7 @@ def train(train_loader, model, optimizer, epoch, logger, load_triplets  = False)
         optimizer.zero_grad()
         loss.backward()
         optimizer.step()
-        adjust_learning_rate(optimizer)
+        adjust_learning_rate_clr(optimizer)
         if batch_idx % args.log_interval == 0:
             pbar.set_description(
                 'Train Epoch: {} [{}/{} ({:.0f}%)]\tLoss: {:.6f}'.format(
@@ -465,6 +484,24 @@ def test(test_loader, model, epoch, logger, logger_test_name):
 
     if (args.enable_logging):
         logger.log_value(logger_test_name+' fpr95', fpr95)
+    return
+
+def adjust_learning_rate_clr(optimizer):
+    """Updates the learning rate given the learning rate decay.
+    The routine has been implemented according to the original Lua SGD optimizer
+    """
+    for group in optimizer.param_groups:
+        if 'step' not in group:
+            group['step'] = 0.
+        else:
+            group['step'] += 1.
+        linear_part =  args.lr * (
+        1.0 - float(group['step']) * float(args.batch_size) / (args.n_triplets * float(args.epochs)))
+        in_epoch = float(int(group['step']) * int(args.batch_size) % (args.n_triplets)) / float(args.n_triplets);
+        periodic_part = 0.1 + 0.9*math.sin(args.freq * 2.0 * math.pi * in_epoch) + 1e-12
+        if periodic_part  <=0:
+            periodic_part = 1.01 + periodic_part
+        group['lr'] = linear_part * periodic_part
     return
 
 def adjust_learning_rate(optimizer):
