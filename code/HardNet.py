@@ -430,7 +430,7 @@ def train(train_loader, model, optimizer, epoch, logger, load_triplets  = False)
         optimizer.zero_grad()
         loss.backward()
         optimizer.step()
-        adjust_learning_rate_clr(optimizer)
+        adjust_learning_rate(optimizer)
         if batch_idx % args.log_interval == 0:
             pbar.set_description(
                 'Train Epoch: {} [{}/{} ({:.0f}%)]\tLoss: {:.6f}'.format(
@@ -484,24 +484,6 @@ def test(test_loader, model, epoch, logger, logger_test_name):
 
     if (args.enable_logging):
         logger.log_value(logger_test_name+' fpr95', fpr95)
-    return
-
-def adjust_learning_rate_clr(optimizer):
-    """Updates the learning rate given the learning rate decay.
-    The routine has been implemented according to the original Lua SGD optimizer
-    """
-    for group in optimizer.param_groups:
-        if 'step' not in group:
-            group['step'] = 0.
-        else:
-            group['step'] += 1.
-        linear_part =  args.lr * (
-        1.0 - float(group['step']) * float(args.batch_size) / (args.n_triplets * float(args.epochs)))
-        in_epoch = float(int(group['step']) * int(args.batch_size) % (args.n_triplets)) / float(args.n_triplets);
-        periodic_part = 0.1 + 0.9*math.sin(args.freq * 2.0 * math.pi * in_epoch) + 1e-12
-        if periodic_part  <=0:
-            periodic_part = 1.01 + periodic_part
-        group['lr'] = linear_part * periodic_part
     return
 
 def adjust_learning_rate(optimizer):

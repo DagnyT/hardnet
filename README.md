@@ -3,13 +3,9 @@
 HardNet model implementation in PyTorch for NIPS 2017 paper ["Working hard to know your neighbor's margins: Local descriptor learning loss"](https://arxiv.org/abs/1705.10872)
 [poster](http://cmp.felk.cvut.cz/~mishkdmy/posters/hardnet2017.pdf), [slides](http://cmp.felk.cvut.cz/~mishkdmy/slides/HardNet2017.pdf)
 
-## Important update
-After two major updates of PyTorch library, we were not able to reproduce the results. Therefore, we did a hyperparameter search and we found that increasing the learning rate to 10 and dropout rate to 0.3 leads to better results, see figure below. We have obtained the same results on different machines
-. We will update arXiv version soon.  
-Pretrained weights in PyTorch format are updated.
+## Update April 06 2018
 
-We also release version, trained on all subsets of Brown dataset, called [HardNet6Brown]('pretrained/6Brown).
-
+We have added small shift and rot augmentation, which improves results up to 1mAP point on HPatches. It is in HardNet.py, turn on by --augmentation=True. All the weight will be updated soon. Version, which is trained on Brown + HPatches + PS datasets is in progress, stay tuned :)
 
 ## Benchmark on [HPatches](https://github.com/hpatches/hpatches-benchmark), mAP
 
