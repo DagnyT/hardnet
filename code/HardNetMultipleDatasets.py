@@ -80,7 +80,7 @@ parser.add_argument('--loss', default='triplet_margin',
                     help='Other options: softmax, contrastive')
 parser.add_argument('--batch-reduce', default='min',
                     help='Other options: average, random, random_global, L2Net')
-parser.add_argument('--num-workers', default=1,
+parser.add_argument('--num-workers', default=4, type=int,
                     help='Number of workers to be created')
 parser.add_argument('--pin-memory', type=bool, default=True,
                     help='')
@@ -301,7 +301,7 @@ class TripletPhotoTour(dset.PhotoTour):
             return inds
 
         triplets = []
-        indices = create_indices(labels)
+        indices = create_indices(labels.numpy())
         unique_labels = np.unique(labels.numpy())
         n_classes = unique_labels.shape[0]
         # add only unique indices in batch
@@ -432,7 +432,7 @@ def weights_init(m):
 def create_loaders(load_random_triplets=False):
     test_dataset_names = copy.copy(dataset_names)
     #test_dataset_names.remove(args.training_set)
-    kwargs = {'num_workers': args.num_workers, 'pin_memory': args.pin_memory} if args.cuda else {}
+    kwargs = {'num_workers': int(args.num_workers), 'pin_memory': args.pin_memory} if args.cuda else {}
     np_reshape64 = lambda x: np.reshape(x, (64, 64, 1))
     transform_test = transforms.Compose([
             transforms.Lambda(np_reshape64),

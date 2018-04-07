@@ -83,7 +83,7 @@ parser.add_argument('--loss', default='triplet_margin',
                     help='Other options: softmax, contrastive')
 parser.add_argument('--batch-reduce', default='min',
                     help='Other options: average, random, random_global, L2Net')
-parser.add_argument('--num-workers', default=1,
+parser.add_argument('--num-workers', default=1, type=int,
                     help='Number of workers to be created')
 parser.add_argument('--pin-memory', type=bool, default=True,
                     help='')
