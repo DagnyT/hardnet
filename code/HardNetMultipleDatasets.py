@@ -15,6 +15,8 @@ If you use this code, please cite
 
 from __future__ import division, print_function
 import sys
+import math
+import PIL
 from copy import deepcopy
 import argparse
 import torch
@@ -118,6 +120,8 @@ parser.add_argument('--lr', type=float, default=10.0, metavar='LR',
                     help='learning rate (default: 10.0)')
 parser.add_argument('--fliprot', type=str2bool, default=True,
                     help='turns on flip and 90deg rotation augmentation')
+parser.add_argument('--augmentation', type=str2bool, default=False,
+                    help='turns on shift and small scale rotation augmentation')
 parser.add_argument('--lr-decay', default=1e-6, type=float, metavar='LRD',
                     help='learning rate decay ratio (default: 1e-6')
 parser.add_argument('--wd', default=1e-4, type=float,
@@ -211,7 +215,7 @@ class TotalDatasetsLoader(data.Dataset):
                 return inds
 
             triplets = []
-            indices = create_indices(labels)
+            indices = create_indices(labels.numpy())
             unique_labels = np.unique(labels.numpy())
             n_classes = unique_labels.shape[0]
             # add only unique indices in batch
@@ -241,7 +245,7 @@ class TotalDatasetsLoader(data.Dataset):
     def __getitem__(self, index):
             def transform_img(img):
                 if self.transform is not None:
-                    img = (img.numpy())/255.0
+                    img = img.numpy()
                     img = self.transform(img)
                 return img
 
@@ -429,11 +433,28 @@ def create_loaders(load_random_triplets=False):
     test_dataset_names = copy.copy(dataset_names)
     #test_dataset_names.remove(args.training_set)
     kwargs = {'num_workers': args.num_workers, 'pin_memory': args.pin_memory} if args.cuda else {}
+    np_reshape64 = lambda x: np.reshape(x, (64, 64, 1))
+    transform_test = transforms.Compose([
+            transforms.Lambda(np_reshape64),
+            transforms.ToPILImage(),
+            transforms.Resize(32),
+            transforms.ToTensor()])
+    transform_train = transforms.Compose([
+            transforms.Lambda(np_reshape64),
+            transforms.ToPILImage(),
+            transforms.RandomRotation(5,PIL.Image.BILINEAR),
+            transforms.RandomResizedCrop(32, scale = (0.9,1.0),ratio = (0.9,1.1)),
+            transforms.Resize(32),
+            transforms.ToTensor()])
     transform = transforms.Compose([
-        transforms.Lambda(cv2_scale),
-        transforms.Lambda(np_reshape),
-        transforms.ToTensor(),
-        transforms.Normalize((args.mean_image,), (args.std_image,))])
+            transforms.Lambda(cv2_scale),
+            transforms.Lambda(np_reshape),
+            transforms.ToTensor(),
+            transforms.Normalize((args.mean_image,), (args.std_image,))])
+    if not args.augmentation:
+        transform_train = transform
+        transform_test = transform
+
 
     train_loader = torch.utils.data.DataLoader(
         TotalDatasetsLoader(train=True,
@@ -444,7 +465,7 @@ def create_loaders(load_random_triplets=False):
                          n_triplets=args.n_triplets,
                          name=args.training_set,
                          download=True,
-                         transform=transform),
+                         transform=transform_train),
         batch_size=args.batch_size,
         shuffle=False, **kwargs)
 
@@ -456,7 +477,7 @@ def create_loaders(load_random_triplets=False):
                                           root=args.dataroot,
                                           name=name,
                                           download=True,
-                                          transform=transform),
+                                          transform=transform_test),
                          batch_size=args.test_batch_size,
                          shuffle=False, **kwargs)}
                     for name in test_dataset_names]
