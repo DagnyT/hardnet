@@ -78,7 +78,7 @@ parser.add_argument('--loss', default= 'triplet_margin',
                     help='Other options: softmax, contrastive')
 parser.add_argument('--batch-reduce', default= 'min',
                     help='Other options: average, random, random_global, L2Net')
-parser.add_argument('--num-workers', default= 8, type=int,
+parser.add_argument('--num-workers', default= 0, type=int,
                     help='Number of workers to be created')
 parser.add_argument('--pin-memory',type=bool, default= True,
                     help='')
@@ -171,12 +171,14 @@ print (("NOT " if not args.cuda else "") + "Using cuda")
 if args.cuda:
     cudnn.benchmark = True
     torch.cuda.manual_seed_all(args.seed)
+torch.backends.cudnn.deterministic = True
 
 # create loggin directory
 if not os.path.exists(args.log_dir):
     os.makedirs(args.log_dir)
 
 # set random seeds
+random.seed(args.seed)
 torch.manual_seed(args.seed)
 np.random.seed(args.seed)
 
