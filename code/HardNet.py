@@ -400,8 +400,8 @@ def train(train_loader, model, optimizer, epoch, logger, load_triplets  = False)
         if args.cuda:
             data_a, data_p  = data_a.cuda(), data_p.cuda()
             data_a, data_p = Variable(data_a), Variable(data_p)
-            out_a, out_p = model(data_a), model(data_p)
-
+            out_a = model(data_a)
+            out_p = model(data_p)
         if load_triplets:
             data_n  = data_n.cuda()
             data_n = Variable(data_n)
@@ -465,8 +465,8 @@ def test(test_loader, model, epoch, logger, logger_test_name):
 
         data_a, data_p, label = Variable(data_a, volatile=True), \
                                 Variable(data_p, volatile=True), Variable(label)
-
-        out_a, out_p = model(data_a), model(data_p)
+        out_a = model(data_a)
+        out_p = model(data_p)
         dists = torch.sqrt(torch.sum((out_a - out_p) ** 2, 1))  # euclidean distance
         distances.append(dists.data.cpu().numpy().reshape(-1,1))
         ll = label.data.cpu().numpy().reshape(-1, 1)
