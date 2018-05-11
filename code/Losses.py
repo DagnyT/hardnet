@@ -4,10 +4,6 @@ import sys
 
 def distance_matrix_vector(anchor, positive):
     """Given batch of anchor descriptors and positive descriptors calculate distance matrix"""
-
-    d1_sq = torch.sum(anchor * anchor, dim=1).unsqueeze(-1)
-    d2_sq = torch.sum(positive * positive, dim=1).unsqueeze(-1)
-
     eps = 1e-6
     return torch.sqrt(2.0 - 2.0 * (anchor @ torch.transpose(positive, 1, 0)) + eps)
 
