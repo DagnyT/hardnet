@@ -5,7 +5,7 @@ import sys
 def distance_matrix_vector(anchor, positive):
     """Given batch of anchor descriptors and positive descriptors calculate distance matrix"""
     eps = 1e-6
-    return torch.sqrt(2.0 - 2.0 * (anchor @ torch.transpose(positive, 1, 0)) + eps)
+    return torch.sqrt(2.0 - 2.0 * torch.bmm(anchor.unsqueeze(0), torch.t(positive).unsqueeze(0)).squeeze(0) + eps)
 
 def distance_vectors_pairwise(anchor, positive, negative = None):
     """Given batch of anchor descriptors and positive descriptors calculate distance matrix"""
