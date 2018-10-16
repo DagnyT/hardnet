@@ -16,7 +16,7 @@ class TotalDatasetsLoader(data.Dataset):
 
         for i in range(1,len(datasets)):
             data = torch.cat([data,datasets[i][0]])
-            labels = torch.cat([labels,datasets[i][1]])+torch.max(labels)+1
+            labels = torch.cat([labels, datasets[i][1]+torch.max(labels)+1])
 
         del datasets
         self.transform = transform
