@@ -35,7 +35,7 @@ To download datasets and start learning descriptor:
 
 ```bash
 git clone https://github.com/DagnyT/hardnet
-./run_me.sh
+./code/run_me.sh
 ```
 
 Logs are stored in tensorboard format in directory logs/
