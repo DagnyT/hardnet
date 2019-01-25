@@ -55,7 +55,7 @@ Converted PyTorch version is [here](pretrained/3rd_party/HardNetPS/).
 
 ## Which weights should I use?
 
-For practical applications, we recommend [HardNet++](pretrained/pretrained_all_datasets/HardNet%2B%2B.pth').
+For practical applications, we recommend [HardNet++](https://github.com/DagnyT/hardnet/blob/master/pretrained/pretrained_all_datasets/HardNet%2B%2B.pth').
 
 For comparison with other descriptors, which are trained on Liberty Brown dataset, we recommend [HardNetLib+](pretrained/train_liberty_with_aug/checkpoint_liberty_with_aug.pth).
 
