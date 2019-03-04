@@ -5,6 +5,7 @@ import time
 from tqdm import tqdm
 import torch
 from torch.autograd import Variable
+from skimage.io import imread
 
 def w1bs_extract_descs_and_save(input_img_fname, model, desc_name, mean_img=0.443728476019, std_img=0.20197947209, cuda = False, out_dir = None):
     if out_dir is None:
@@ -17,7 +18,7 @@ def w1bs_extract_descs_and_save(input_img_fname, model, desc_name, mean_img=0.44
     if len(out_dir) > 0:
         if not os.path.isdir(out_dir):
             os.makedirs(out_dir)
-    image = cv2.imread(input_img_fname, 0)
+    image = imread(input_img_fname, 0)
     h, w = image.shape
     # print(h,w)
     n_patches = int(h / w)
