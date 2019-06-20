@@ -7,6 +7,14 @@ HardNet model implementation in PyTorch for NIPS 2017 paper ["Working hard to kn
 
 We have added small shift and rot augmentation, which improves results up to 1mAP point on HPatches. It is in HardNet.py, turn on by --augmentation=True. All the weight will be updated soon. Version, which is trained on Brown + HPatches + PS datasets is in progress, stay tuned :)
 
+## Re: popular question about BoW retrieval engine
+
+Unfortunately, it is proprietary and we cannot release it. But you can try the following open source repos, both Matlab-based:
+
+- [ASMK](https://github.com/gtolias/asmk)
+- [HQE](https://github.com/gtolias/hqe)
+- [VISE](https://gitlab.com/vgg/vise) 
+
 ## Benchmark on [HPatches](https://github.com/hpatches/hpatches-benchmark), mAP
 
 ![HPatches-results](img/hardnet_hpatches.png)
