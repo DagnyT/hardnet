@@ -438,10 +438,10 @@ def train(train_loader, model, optimizer, epoch, logger, load_triplets  = False)
                 'Train Epoch: {} [{}/{} ({:.0f}%)]\tLoss: {:.6f}'.format(
                     epoch, batch_idx * len(data_a), len(train_loader.dataset),
                            100. * batch_idx / len(train_loader),
-                    loss.data[0]))
+                    loss.item()))
 
     if (args.enable_logging):
-        logger.log_value('loss', loss.data[0]).step()
+        logger.log_value('loss', loss.item()).step()
 
     try:
         os.stat('{}{}'.format(args.model_dir,suffix))
