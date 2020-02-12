@@ -3,9 +3,16 @@
 HardNet model implementation in PyTorch for NIPS 2017 paper ["Working hard to know your neighbor's margins: Local descriptor learning loss"](https://arxiv.org/abs/1705.10872)
 [poster](http://cmp.felk.cvut.cz/~mishkdmy/posters/hardnet2017.pdf), [slides](http://cmp.felk.cvut.cz/~mishkdmy/slides/HardNet2017.pdf)
 
+
+## An example how to compile HardNet to Torchscript to be used in C++ code
+
+[Notebook](notebook/convert_HardNet_to_JIT.ipynb)
+
+
 ## Update April 06 2018
 
 We have added small shift and rot augmentation, which improves results up to 1mAP point on HPatches. It is in HardNet.py, turn on by --augmentation=True. All the weight will be updated soon. Version, which is trained on Brown + HPatches + PS datasets is in progress, stay tuned :)
+
 
 ## Re: popular question about BoW retrieval engine
 
