@@ -107,7 +107,3 @@ Please cite us if you use this code:
  month = dec
 }
 ```
-
-year = 2017,
-    month = dec}
-```
