@@ -98,11 +98,16 @@ python extract_hardnetCaffe_desc_from_hpatches_file.py ../imgs/ref.png hardnet_c
 
 Please cite us if you use this code:
 
-```
-@article{HardNet2017,
+```bibtex
+@inproceedings{HardNet,
  author = {Anastasiya Mishchuk, Dmytro Mishkin, Filip Radenovic, Jiri Matas},
-    title = "{Working hard to know your neighbor's margins: Local descriptor learning loss}",
-    booktitle = {Proceedings of NIPS},
-     year = 2017,
+ title = "{Working hard to know your neighbor's margins: Local descriptor learning loss}",
+ booktitle = {Proceedings of NeurIPS},
+ year = 2017,
+ month = dec
+}
+```
+
+year = 2017,
     month = dec}
 ```
