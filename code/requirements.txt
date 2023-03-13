@@ -1,7 +1,7 @@
 opencv_contrib_python==3.3.0.10
 scipy==0.19.0
 pandas==0.20.1
-numpy==1.12.1
+numpy==1.22.0
 tensorboard_logger==0.0.4
 tqdm==4.19.1.post1
 matplotlib==2.0.2
