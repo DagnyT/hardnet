@@ -62,7 +62,7 @@ def loss_L2Net(anchor, positive, anchor_swap = False,  margin = 1.0, loss_type =
     assert anchor.dim() == 2, "Inputd must be a 2D matrix."
     eps = 1e-8
     dist_matrix = distance_matrix_vector(anchor, positive)
-    eye = torch.autograd.Variable(torch.eye(dist_matrix.size(1))).cuda()
+    eye = torch.autograd.Variable(torch.eye(dist_matrix.size(1))).to(anchor.device)
 
     # steps to filter out same patches that occur in distance matrix as negatives
     pos1 = torch.diag(dist_matrix)
@@ -93,7 +93,7 @@ def loss_HardNet(anchor, positive, anchor_swap = False, anchor_ave = False,\
     assert anchor.dim() == 2, "Inputd must be a 2D matrix."
     eps = 1e-8
     dist_matrix = distance_matrix_vector(anchor, positive) +eps
-    eye = torch.autograd.Variable(torch.eye(dist_matrix.size(1))).cuda()
+    eye = torch.autograd.Variable(torch.eye(dist_matrix.size(1))).to(anchor.device)
 
     # steps to filter out same patches that occur in distance matrix as negatives
     pos1 = torch.diag(dist_matrix)
@@ -129,7 +129,7 @@ def loss_HardNet(anchor, positive, anchor_swap = False, anchor_ave = False,\
             min_neg = torch.min(min_neg,min_neg2)
         min_neg = min_neg.squeeze(0)
     elif batch_reduce == 'random':
-        idxs = torch.autograd.Variable(torch.randperm(anchor.size()[0]).long()).cuda()
+        idxs = torch.autograd.Variable(torch.randperm(anchor.size()[0]).long()).to(anchor.device)
         min_neg = dist_without_min_on_diag.gather(1,idxs.view(-1,1))
         if anchor_swap:
             min_neg2 = torch.t(dist_without_min_on_diag).gather(1,idxs.view(-1,1)) 
