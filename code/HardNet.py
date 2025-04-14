@@ -40,6 +40,7 @@ from Utils import L2Norm, cv2_scale, np_reshape
 from Utils import str2bool
 import torch.nn as nn
 import torch.nn.functional as F
+from phototour import PhotoTour
 
 class CorrelationPenaltyLoss(nn.Module):
     def __init__(self):
@@ -165,6 +166,8 @@ if os.path.isdir(args.w1bsroot):
 os.environ['CUDA_VISIBLE_DEVICES'] = args.gpu_id
 
 args.cuda = not args.no_cuda and torch.cuda.is_available()
+device = torch.device("cuda" if args.cuda else "cpu")
+
 
 print (("NOT " if not args.cuda else "") + "Using cuda")
 
@@ -182,12 +185,13 @@ random.seed(args.seed)
 torch.manual_seed(args.seed)
 np.random.seed(args.seed)
 
-class TripletPhotoTour(dset.PhotoTour):
+class TripletPhotoTour(PhotoTour):
     """
     From the PhotoTour Dataset it generates triplet samples
     note: a triplet is composed by a pair of matching images and one of
     different class.
     """
+
     def __init__(self, train=True, transform=None, batch_size = None,load_random_triplets = False,  *arg, **kw):
         super(TripletPhotoTour, self).__init__(*arg, **kw)
         self.transform = transform
@@ -195,6 +199,7 @@ class TripletPhotoTour(dset.PhotoTour):
         self.train = train
         self.n_triplets = args.n_triplets
         self.batch_size = batch_size
+
 
         if self.train:
             print('Generating {} triplets'.format(self.n_triplets))
@@ -397,13 +402,12 @@ def train(train_loader, model, optimizer, epoch, logger, load_triplets  = False)
         else:
             data_a, data_p = data
 
-        if args.cuda:
-            data_a, data_p  = data_a.cuda(), data_p.cuda()
-            data_a, data_p = Variable(data_a), Variable(data_p)
-            out_a = model(data_a)
-            out_p = model(data_p)
+        data_a, data_p  = data_a.to(device), data_p.to(device)
+        data_a, data_p = Variable(data_a), Variable(data_p)
+        out_a = model(data_a)
+        out_p = model(data_p)
         if load_triplets:
-            data_n  = data_n.cuda()
+            data_n  = data_n.to(device)
             data_n = Variable(data_n)
             out_n = model(data_n)
 
@@ -460,8 +464,7 @@ def test(test_loader, model, epoch, logger, logger_test_name):
     pbar = tqdm(enumerate(test_loader))
     for batch_idx, (data_a, data_p, label) in pbar:
 
-        if args.cuda:
-            data_a, data_p = data_a.cuda(), data_p.cuda()
+        data_a, data_p = data_a.to(device), data_p.to(device)
 
         data_a, data_p, label = Variable(data_a, volatile=True), \
                                 Variable(data_p, volatile=True), Variable(label)
@@ -522,8 +525,7 @@ def main(train_loader, test_loaders, model, logger, file_logger):
     #if (args.enable_logging):
     #    file_logger.log_string('logs.txt', '\nparsed options:\n{}\n'.format(vars(args)))
 
-    if args.cuda:
-        model.cuda()
+    model = model.to(device)
 
     optimizer1 = create_optimizer(model.features, args.lr)
 
