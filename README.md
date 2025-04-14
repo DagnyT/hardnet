@@ -9,6 +9,10 @@ HardNet model implementation in PyTorch for NIPS 2017 paper ["Working hard to kn
 [Notebook](notebook/convert_HardNet_to_JIT.ipynb)
 
 
+## Update April 2025
+
+The PhotoTour dataset is [no longer available](https://github.com/pytorch/vision/issues/8960) at original links. We use a [mirror from CTU in Prague](https://cmp.felk.cvut.cz/~mishkdmy/datasets/BrownPhotoTour/) instead.
+
 ## Update April 06 2018
 
 We have added small shift and rot augmentation, which improves results up to 1mAP point on HPatches. It is in HardNet.py, turn on by --augmentation=True. All the weight will be updated soon. Version, which is trained on Brown + HPatches + PS datasets is in progress, stay tuned :)
